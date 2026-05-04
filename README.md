@@ -136,4 +136,3 @@ This project is licensed under the **MIT License**. See [`LICENSE`](LICENSE) for
 ---
 
 **Made with ❤️ for the WoTLK private server community**  
-[🐛 Report a Bug](../../issues) · [📥 Download Latest Release](../../releases)
