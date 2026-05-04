@@ -10,6 +10,11 @@ local RaidTargetReference = {
 	SKULL = 0x08000000
 }
 
+-- Performance Throttling: Begrenzt COMBAT_LOG_EVENT Verarbeitung auf ~30 Events pro Sekunde
+-- Verhindert hohe CPU-Last in großen Gruppen/Kämpfen bei sehr hoher Event-Frequenz
+local lastSpellCastProcessTime = 0
+local SPELLCAST_THROTTLE = 0.033 -- ca. 30 fps / 33ms Mindestabstand
+
 -------------------------------------------------------------------------
 -- Spell Cast Event Watcher.
 -------------------------------------------------------------------------
@@ -63,11 +68,10 @@ local function OnSpellCast(...)
 	local FoundPlate = nil
 
 	-- Gather Spell Info
-	local spell, _, icon, castTime
-	spell, _, icon, _, _, _, castTime, _, _ = GetSpellInfo(spellid)
-	if castTime <= 0 then
-		return
-	end
+	-- 3.3.5a Fix: GetSpellInfo gibt nur 3 Werte zurück (name, rank, icon)
+	-- castTime existiert in dieser Client Version nicht
+	-- SPELL_CAST_START wird automatisch nur für Zauber mit Cast-Zeit > 0 gefeuert
+	local spell, _, icon = GetSpellInfo(spellid)
 
 	if bit.band(sourceFlags, COMBATLOG_OBJECT_REACTION_HOSTILE) > 0 then
 		if bit.band(sourceFlags, COMBATLOG_OBJECT_CONTROL_PLAYER) > 0 then
@@ -104,6 +108,13 @@ end
 --------------------------------------
 
 local function OnCombatEvent(self, event, ...)
+	-- Performance Throttling
+	local now = GetTime()
+	if now - lastSpellCastProcessTime < SPELLCAST_THROTTLE then
+		return
+	end
+	lastSpellCastProcessTime = now
+
 	local _, combatevent, sourceGUID, sourceName, sourceFlags, _, _, _, spellid, spellname = ...
 	if CombatEventHandlers[combatevent] and sourceGUID ~= UnitGUID("player") and sourceGUID ~= UnitGUID("target") and spellid then
 		CombatEventHandlers[combatevent](sourceGUID, sourceName, sourceFlags, spellid, spellname)

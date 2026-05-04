@@ -4,6 +4,11 @@ local GetSpellInfo = GetSpellInfo
 local PolledHideIn = TidyPlatesWidgets.PolledHideIn
 local AuraMonitor = CreateFrame("Frame")
 
+-- Performance Throttling: Begrenzt COMBAT_LOG_EVENT Verarbeitung auf ~30 Events pro Sekunde
+-- Verhindert hohe CPU-Last in großen Gruppen/Kämpfen bei sehr hoher Event-Frequenz
+local lastDebuffProcessTime = 0
+local DEBUFF_THROTTLE = 0.033 -- ca. 30 fps / 33ms Mindestabstand
+
 -- TODO: keep an eye on weak tables.
 local WidgetList = setmetatable({}, {__mode = "kv"})
 local weaktable = TidyPlatesUtility.weaktable
@@ -11,7 +16,12 @@ local WidgetGUID = setmetatable({}, weaktable)
 
 local UpdateWidget
 local TargetOfGroupMembers = {}
-local MaximumDisplayableDebuffs = 6
+local function GetMaxDebuffs()
+    local hub = TidyPlatesHubDamageVariables or TidyPlatesHubTankVariables
+    local index = hub and hub.WidgetsDebuffMaxPerLine or 4  -- Default 4 = 6
+    local map = {0, 2, 4, 6}
+    return map[index] or 6
+end
 
 local AURA_TARGET_HOSTILE = 1
 local AURA_TARGET_FRIENDLY = 2
@@ -142,8 +152,11 @@ end
 -----------------------------------------------------
 -- Aura Durations
 -----------------------------------------------------
-TidyPlatesData = TidyPlatesData or {}
-TidyPlatesData.CachedAuraDurations = {}
+-- Sicherstellen dass TidyPlatesData existiert bevor zugegriffen wird
+if not TidyPlatesData then
+	TidyPlatesData = {}
+end
+TidyPlatesData.CachedAuraDurations = TidyPlatesData.CachedAuraDurations or {}
 
 local function GetSpellDuration(spellid)
 	if spellid then
@@ -431,6 +444,13 @@ local function GetCombatEventResults(...)
 end
 
 local function CombatEventHandler(frame, event, ...)
+	-- Performance Throttling
+	local now = GetTime()
+	if now - lastDebuffProcessTime < DEBUFF_THROTTLE then
+		return
+	end
+	lastDebuffProcessTime = now
+
 	-- General Events, Passthrough
 	if event ~= "COMBAT_LOG_EVENT_UNFILTERED" then
 		if GeneralEvents[event] then
@@ -563,14 +583,14 @@ local function UpdateIconGrid(frame, guid)
 				UpdateIcon(AuraIconFrames[AuraSlotIndex], cachedaura.texture, cachedaura.expiration, cachedaura.stacks)
 				AuraSlotIndex = AuraSlotIndex + 1
 			end
-			if AuraSlotIndex > MaximumDisplayableDebuffs then
+			if AuraSlotIndex > GetMaxDebuffs() then
 				break
 			end
 		end
 	end
 
 	-- Clear Extra Slots
-	for index = AuraSlotIndex, MaximumDisplayableDebuffs do
+	for index = AuraSlotIndex, GetMaxDebuffs() do
 		UpdateIcon(AuraIconFrames[index])
 	end
 
@@ -731,17 +751,18 @@ local function CreateAuraWidget(parent)
 	frame.AuraIconFrames = {}
 	local AuraIconFrames = frame.AuraIconFrames
 
-	for index = 1, MaximumDisplayableDebuffs do
+	local maxDebuffs = GetMaxDebuffs()
+	for index = 1, maxDebuffs do
 		AuraIconFrames[index] = CreateAuraIconFrame(frame)
 	end
-	local FirstRowCount = min(MaximumDisplayableDebuffs / 2)
+	local FirstRowCount = min(maxDebuffs / 2)
 	-- Set Anchors
 	AuraIconFrames[1]:SetPoint("LEFT", frame)
 	for index = 2, FirstRowCount do
 		AuraIconFrames[index]:SetPoint("LEFT", AuraIconFrames[index - 1], "RIGHT", 5, 0)
 	end
 	AuraIconFrames[FirstRowCount + 1]:SetPoint("BOTTOMLEFT", AuraIconFrames[1], "TOPLEFT", 0, 8)
-	for index = (FirstRowCount + 2), MaximumDisplayableDebuffs do
+	for index = (FirstRowCount + 2), GetMaxDebuffs() do
 		AuraIconFrames[index]:SetPoint("LEFT", AuraIconFrames[index - 1], "RIGHT", 5, 0)
 	end
 	-- Functions

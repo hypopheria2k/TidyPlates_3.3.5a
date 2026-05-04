@@ -67,6 +67,7 @@ TidyPlatesHubTankVariables = {
 	WidgetsRangeMode = 1,
 	WidgetsDebuff = true,
 	WidgetsDebuffMode = 3,
+	WidgetsDebuffMaxPerLine = 6,
 	WidgetsDebuffList = {["Obsolete"] = true},
 	--WidgetsDebuffTrackList = "Moonfire",
 	WidgetsDebuffTrackList = "My Rake\nMy Rip\nMy Moonfire\nAll 339",
@@ -420,7 +421,20 @@ local function CreateInterfacePanel(panelName, panelTitle, heading, parentTitle)
 	panel.WidgetsRangeMode = CreateQuickDropdown(panelName .. "WidgetsRangeMode", L["Range:"], RangeModes, 1, AlignmentColumn, panel.WidgetsRangeIndicator, 16)
 	panel.WidgetsDebuff = CreateQuickCheckbutton(panelName .. "WidgetsDebuff", L["Show My Debuff Timers"], AlignmentColumn, panel.WidgetsRangeMode)
 	panel.WidgetsDebuffMode = CreateQuickDropdown(panelName .. "WidgetsDebuffMode", L["Debuff Filter:"], DebuffModes, 1, AlignmentColumn, panel.WidgetsDebuff, 16)
-	panel.WidgetsDebuffListLabel = CreateQuickItemLabel(nil, L["Debuff Names:"], AlignmentColumn, panel.WidgetsDebuffMode, 16)
+
+	local DebuffMaxDropdownItems = {
+		{text = L["Off (0)"], notCheckable = 1},
+		{text = "2", notCheckable = 1},
+		{text = "4", notCheckable = 1},
+		{text = "6", notCheckable = 1}
+	}
+	panel.WidgetsDebuffMaxPerLine = CreateQuickDropdown(panelName .. "WidgetsDebuffMaxPerLine", L["Debuffs per Line:"], DebuffMaxDropdownItems, 4, AlignmentColumn, panel.WidgetsDebuffMode, 16)
+	panel.WidgetsDebuffMaxPerLine.OnValueChanged = function()
+		OnPanelItemChange()
+		TidyPlates:ForceUpdate()
+	end
+
+	panel.WidgetsDebuffListLabel = CreateQuickItemLabel(nil, L["Debuff Names:"], AlignmentColumn, panel.WidgetsDebuffMaxPerLine, 16)
 	panel.WidgetsDebuffTrackList = CreateQuickEditbox(panelName .. "WidgetsDebuffTrackList", AlignmentColumn, panel.WidgetsDebuffListLabel, 16)
 	-- TIP
 	panel.WidgetsDebuffTrackListDescription = CreateQuickItemLabel(nil, L["WidgetsDebuffTrackList_Description"], AlignmentColumn, panel.WidgetsDebuffListLabel, 210)

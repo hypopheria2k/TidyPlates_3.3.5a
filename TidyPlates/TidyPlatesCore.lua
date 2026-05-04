@@ -5,6 +5,9 @@
 local addonName, TidyPlates = ...
 _G.TidyPlates = TidyPlates
 
+-- Stelle sicher, dass TidyPlatesData immer existiert (auch vor ADDON_LOADED)
+TidyPlatesData = TidyPlatesData or {}
+
 TidyPlates.callbacks = TidyPlates.callbacks or LibStub("CallbackHandler-1.0"):New(TidyPlates)
 
 local _
@@ -296,6 +299,14 @@ do
 	end
 	-- UpdateIndicator_UnitColor: Update the health bar coloring, if needed
 	function UpdateIndicator_UnitColor()
+		-- Crowd Control Farbänderung
+		if TidyPlatesWidgets and TidyPlatesWidgets.IsUnitCrowdControlled and TidyPlatesWidgets.IsUnitCrowdControlled(unit) then
+			local color = CROWD_CONTROL_COLOR or {r=0.2, g=0.5, b=1.0}
+			bars.healthbar:SetForegroundColor(color.r, color.g, color.b)
+			visual.name:SetTextColor(color.r, color.g, color.b, 1)
+			return
+		end
+
 		-- Set Health Bar
 		if activetheme.SetHealthbarColor then
 			--bars.healthbar:SetForegroundColor(activetheme.SetHealthbarColor(unit))
@@ -1212,6 +1223,15 @@ do
 	PlateHandler:SetScript("OnEvent", EventHandler)
 
 	-- Events
+	function events:ADDON_LOADED(name)
+		if name == addonName then
+			-- SavedVariables werden erst nach vollständigen Laden des Addons vom Client eingespielt
+			-- Initialisierung an diesem Zeitpunkt garantiert dass die Tabelle korrekt initialisiert wird
+			TidyPlatesData = TidyPlatesData or {}
+			PlateHandler:UnregisterEvent("ADDON_LOADED")
+		end
+	end
+
 	function events:PLAYER_ENTERING_WORLD()
 		PlateHandler:SetScript("OnUpdate", OnUpdate)
 	end
