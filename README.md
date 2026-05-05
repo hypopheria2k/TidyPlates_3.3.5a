@@ -128,5 +128,17 @@ Issues and pull requests are highly welcome! Please ensure all changes are teste
 This project is licensed under the **MIT License**. See [`LICENSE`](LICENSE) for details.
 
 ---
+
+## Screenshots
+
+<table>
+  <tr>
+    <td><img width="240" height="360" alt="Screenshot 2" src="https://github.com/user-attachments/assets/5c025da1-c875-4f2f-a1b6-6fa078cce75f" /></td>
+    <td><img width="240" height="360" alt="Screenshot 1" src="https://github.com/user-attachments/assets/d9c84771-d472-4d3a-9bc0-9fbf982a71f7" /></td>
+    <td><img width="240" height="360" alt="Screenshot 3" src="https://github.com/user-attachments/assets/69ef53f6-7189-40ae-8885-2fe62e9c9f17" /></td>
+  </tr>
+</table>
+
+---
+
 **Made with ❤️ for the WoTLK private server community**  
-[🐛 Report a Bug](../../issues) · [📥 Download Latest Release](../../releases)
