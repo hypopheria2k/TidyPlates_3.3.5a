@@ -53,6 +53,7 @@ TidyPlatesHubTankVariables = {
 	ColorAttackingOtherTank = {r = 15 / 255, g = 133 / 255, b = 255 / 255}, -- Bright Blue
 	ColorDangerGlowOnParty = false,
 	ClassColorPartyMembers = false,
+	PetHealthBarColor = { r = 0.76, g = 0.42, b = 1 },  -- Violett
 	-- Widgets
 	---------------------------------------
 	WidgetTargetHighlight = true,
@@ -105,6 +106,8 @@ local function OnPanelItemChange()
 		TidyPlatesHubTankVariables.WidgetsDebuffPriority
 	)
 	ConvertStringToTable(TidyPlatesHubTankVariables.OpacityFilterList, TidyPlatesHubTankVariables.OpacityFilterLookup)
+	-- Synchronisiere Pet-Farbe ins ThreatPlates-Profil
+	TidyPlatesThreat.db.profile.PetHealthBarColor = TidyPlatesHubTankVariables.PetHealthBarColor
 end
 
 local TidyPlatesHubRapidPanel = TidyPlatesHubRapidPanel
@@ -405,10 +408,11 @@ local function CreateInterfacePanel(panelName, panelTitle, heading, parentTitle)
 	panel.ColorAttackingOtherTank = CreateQuickColorbox(panelName .. "ColorAttackingOtherTank", L["Attacking Another Tank"], AlignmentColumn, panel.ColorAttackingOthers, 16)
 	panel.ColorDangerGlowOnParty = CreateQuickCheckbutton(panelName .. "ColorDangerGlowOnParty", L["Show Warning around Group Members with Aggro"], AlignmentColumn, panel.ColorAttackingOtherTank)
 	panel.ClassColorPartyMembers = CreateQuickCheckbutton(panelName .. "ClassColorPartyMembers", L["Show Class Color for Party and Raid Members"], AlignmentColumn, panel.ColorDangerGlowOnParty)
+	panel.PetHealthBarColor = CreateQuickColorbox(panelName .. "PetHealthBarColor", "Pet Health Bar Color", AlignmentColumn, panel.ClassColorPartyMembers, 16)
 
 	--Widgets
 	------------------------------
-	panel.WidgetsLabel = CreateQuickHeadingLabel(nil, L["Widgets"], AlignmentColumn, panel.ClassColorPartyMembers, 0, 4)
+	panel.WidgetsLabel = CreateQuickHeadingLabel(nil, L["Widgets"], AlignmentColumn, panel.PetHealthBarColor, 0, 4)
 	panel.WidgetTargetHighlight = CreateQuickCheckbutton(panelName .. "WidgetTargetHighlight", L["Show Highlight on Current Target"], AlignmentColumn, panel.WidgetsLabel)
 	panel.WidgetEliteIndicator = CreateQuickCheckbutton(panelName .. "WidgetEliteIndicator", L["Show Elite Indicator"], AlignmentColumn, panel.WidgetTargetHighlight)
 	panel.ClassEnemyIcon = CreateQuickCheckbutton(panelName .. "ClassEnemyIcon", L["Show Enemy Class Icons"], AlignmentColumn, panel.WidgetEliteIndicator)
@@ -514,6 +518,10 @@ local function CreateInterfacePanel(panelName, panelTitle, heading, parentTitle)
 		if event == "PLAYER_LOGIN" then
 		elseif event == "PLAYER_ENTERING_WORLD" then
 			GetSavedVariables(TidyPlatesHubTankVariables, TidyPlatesHubTankSavedVariables)
+			-- Pet-Farbe aus ThreatPlates-Profil übernehmen, damit der Picker sie anzeigt
+			if TidyPlatesThreat and TidyPlatesThreat.db and TidyPlatesThreat.db.profile and TidyPlatesThreat.db.profile.PetHealthBarColor then
+				TidyPlatesHubTankVariables.PetHealthBarColor = TidyPlatesThreat.db.profile.PetHealthBarColor
+			end
 			CallForStyleUpdate()
 
 			-- Convert old list values for Opacity Filter

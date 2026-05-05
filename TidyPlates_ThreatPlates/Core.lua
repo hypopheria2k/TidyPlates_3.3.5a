@@ -164,6 +164,7 @@ function TidyPlatesThreat:OnInitialize()
 			fHPbarColor = {r = 1, g = 1, b = 1},
 			nHPbarColor = {r = 1, g = 1, b = 1},
 			HPbarColor = {r = 1, g = 1, b = 1},
+			PetHealthBarColor = {r = 0.76, g = 0.42, b = 1},
 			tHPbarColor = {r = 0, g = 0.5, b = 1},
 			totemSettings = {
 				hideHealthbar = false,

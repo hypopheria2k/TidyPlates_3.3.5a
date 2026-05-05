@@ -39,6 +39,12 @@ This fork resolves all known issues from the original backport and introduces se
 
 > All changes remain **100% backward compatible** with existing themes and saved variables.
 
+## 🐾 Pet Health Bar Color
+   – Differentiate player pets from their owners with a dedicated color picker.
+   – Located under "Color" in the Hub panels (Damage/Tank), this setting applies a custom
+     health bar color (default: violet) to all friendly player pets (hunter pets, ghouls, etc.).
+   – The chosen color is saved per spec and persists across sessions.
+
 ## 🔧 Technical Deep Dive: Performance Optimizations
 This fork implements low-level optimizations that significantly reduce CPU usage, especially in large raids or crowded zones (Wintergrasp, Alterac Valley).
 

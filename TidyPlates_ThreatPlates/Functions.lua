@@ -260,6 +260,23 @@ do
 		local db = TidyPlatesThreat.db.profile
 		local style, custom = TidyPlatesThreat.SetStyle(unit)
 
+		-- Pet-Farbe: Überschreibt alle anderen Farbmodi für Begleiter, sodass sie sofort erkennbar sind.
+		-- 3.3.5a: unit.name kann Server-Suffix enthalten, deshalb mit strsplit bereinigen.
+		if TidyPlatesUtility.PetNames then
+			local shortName = unit.name
+			-- Entferne optionales Server-Suffix (z.B. "Bear-Mograine" -> "Bear")
+			local dashPos = strfind(shortName, "-")
+			if dashPos then
+				shortName = strsub(shortName, 1, dashPos - 1)
+			end
+			if TidyPlatesUtility.PetNames[shortName] then
+				local petCol = TidyPlatesThreat.db.profile.PetHealthBarColor
+				if petCol then
+					return petCol.r, petCol.g, petCol.b, petCol.r, petCol.g, petCol.b
+				end
+			end
+		end
+
 		if custom == true then
 			for k_c, k_v in pairs(db.uniqueSettings.list) do
 				if k_v == "GROUP" then

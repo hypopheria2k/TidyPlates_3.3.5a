@@ -937,6 +937,13 @@ local function GetOptions()
 															get = GetColor,
 															set = SetColor,
 															arg = {"HPbarColor"}
+														},
+														PetColor = {
+															name = "Pet Health Bar Color",
+															type = "color",
+															get = GetColor,
+															set = SetColor,
+															arg = {"PetHealthBarColor"}
 														}
 													}
 												}
