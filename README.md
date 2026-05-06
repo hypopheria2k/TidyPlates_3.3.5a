@@ -45,7 +45,7 @@ This fork resolves all known issues from the original backport and introduces se
 - Configured via the color picker in the Hub panels (Damage/Tank), also accessible through `/tidyplates`.
 - A separate option ("Apply to Enemy Pets") enables the color for hostile pets (e.g. in PvP). Default color: violet.
 - The chosen color is saved per specialization and persists across sessions.
-- **Fix 06.05.2026** – The color now appears immediately after login without requiring `/reload`.
+- **Update (06.05.2026):** Resolved an issue where pet colors wouldn't initialize correctly on login. The color now applies immediately without requiring a `/reload`.
 
 ## 🔧 Technical Deep Dive: Performance Optimizations
 This fork implements low-level optimizations that significantly reduce CPU usage, especially in large raids or crowded zones (Wintergrasp, Alterac Valley).
