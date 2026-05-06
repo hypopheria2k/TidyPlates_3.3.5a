@@ -108,8 +108,6 @@ local function OnPanelItemChange()
 		TidyPlatesHubDamageVariables.OpacityFilterList,
 		TidyPlatesHubDamageVariables.OpacityFilterLookup
 	)
-	-- Synchronisiere Pet-Farbe ins ThreatPlates-Profil
-	TidyPlatesThreat.db.profile.PetHealthBarColor = TidyPlatesHubDamageVariables.PetHealthBarColor
 end
 
 local TidyPlatesHubRapidPanel = TidyPlatesHubRapidPanel
@@ -407,6 +405,22 @@ local function CreateInterfacePanel(panelName, panelTitle, heading, parentTitle)
 	panel.ColorDangerGlowOnParty = CreateQuickCheckbutton(panelName .. "ColorDangerGlowOnParty", L["Show Warning on Group Members with Aggro"], AlignmentColumn, panel.ColorAttackingOthers)
 	panel.ClassColorPartyMembers = CreateQuickCheckbutton(panelName .. "ClassColorPartyMembers", L["Show Class Color for Party and Raid Members"], AlignmentColumn, panel.ColorDangerGlowOnParty)
 	panel.PetHealthBarColor = CreateQuickColorbox(panelName .. "PetHealthBarColor", "Pet Health Bar Color", AlignmentColumn, panel.ClassColorPartyMembers, 16)
+
+	panel.PetHealthBarColor.OnValueChanged = function()
+		local color = panel.PetHealthBarColor:GetValue()
+		if TidyPlatesThreat and TidyPlatesThreat.db and TidyPlatesThreat.db.profile then
+			local profile = TidyPlatesThreat.db.profile
+			if not profile.PetHealthBarColor then
+				profile.PetHealthBarColor = { r = color.r, g = color.g, b = color.b, a = 1 }
+			else
+				profile.PetHealthBarColor.r = color.r
+				profile.PetHealthBarColor.g = color.g
+				profile.PetHealthBarColor.b = color.b
+				profile.PetHealthBarColor.a = 1
+			end
+		end
+		TidyPlates:ForceUpdate()
+	end
 	--Widgets
 	------------------------------
 	panel.WidgetsLabel = CreateQuickHeadingLabel(nil, L["Widgets"], AlignmentColumn, panel.PetHealthBarColor, 0, 4)
@@ -515,9 +529,14 @@ local function CreateInterfacePanel(panelName, panelTitle, heading, parentTitle)
 		if event == "PLAYER_LOGIN" then
 		elseif event == "PLAYER_ENTERING_WORLD" then
 			GetSavedVariables(TidyPlatesHubDamageVariables, TidyPlatesHubDamageSavedVariables)
-			-- Pet-Farbe aus ThreatPlates-Profil übernehmen, damit der Picker sie anzeigt
-			if TidyPlatesThreat and TidyPlatesThreat.db and TidyPlatesThreat.db.profile and TidyPlatesThreat.db.profile.PetHealthBarColor then
-				TidyPlatesHubDamageVariables.PetHealthBarColor = TidyPlatesThreat.db.profile.PetHealthBarColor
+			-- Picker mit ThreatPlates-Profil synchronisieren
+			if TidyPlatesThreat and TidyPlatesThreat.db and TidyPlatesThreat.db.profile then
+				local profile = TidyPlatesThreat.db.profile
+				if profile.PetHealthBarColor then
+					panel.PetHealthBarColor:SetBackdropColor(profile.PetHealthBarColor.r, profile.PetHealthBarColor.g, profile.PetHealthBarColor.b, 1)
+				else
+					panel.PetHealthBarColor:SetBackdropColor(0.76, 0.42, 1)
+				end
 			end
 			CallForStyleUpdate()
 			ConvertDebuffListTable(

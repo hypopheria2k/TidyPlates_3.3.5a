@@ -106,8 +106,6 @@ local function OnPanelItemChange()
 		TidyPlatesHubTankVariables.WidgetsDebuffPriority
 	)
 	ConvertStringToTable(TidyPlatesHubTankVariables.OpacityFilterList, TidyPlatesHubTankVariables.OpacityFilterLookup)
-	-- Synchronisiere Pet-Farbe ins ThreatPlates-Profil
-	TidyPlatesThreat.db.profile.PetHealthBarColor = TidyPlatesHubTankVariables.PetHealthBarColor
 end
 
 local TidyPlatesHubRapidPanel = TidyPlatesHubRapidPanel
@@ -382,7 +380,8 @@ local function CreateInterfacePanel(panelName, panelTitle, heading, parentTitle)
 	--Scale
 	------------------------------
 	panel.ScaleLabel = CreateQuickHeadingLabel(nil, L["Scale"], AlignmentColumn, panel.OpacityFilterList, 0, 4)
-	panel.ScaleStandard = CreateQuickSlider(panelName .. "ScaleStandard", L["Normal Scale:"], AlignmentColumn, panel.ScaleLabel, 0, 2)panel.ScaleSpotlightMode = CreateQuickDropdown( panelName .. "ScaleSpotlightMode", L["Scale Spotlight Mode:"], ScaleModes, 1, AlignmentColumn, panel.ScaleStandard)
+	panel.ScaleStandard = CreateQuickSlider(panelName .. "ScaleStandard", L["Normal Scale:"], AlignmentColumn, panel.ScaleLabel, 0, 2)
+	panel.ScaleSpotlightMode = CreateQuickDropdown( panelName .. "ScaleSpotlightMode", L["Scale Spotlight Mode:"], ScaleModes, 1, AlignmentColumn, panel.ScaleStandard)
 	panel.ScaleSpotlight = CreateQuickSlider(panelName .. "ScaleSpotlight", L["Spotlight Scale:"], AlignmentColumn, panel.ScaleSpotlightMode, 0, 2)
 	panel.ScaleIgnoreNeutralUnits = CreateQuickCheckbutton(panelName .. "ScaleIgnoreNeutralUnits", L["Ignore Neutral Units"], AlignmentColumn, panel.ScaleSpotlight, 16)
 	panel.ScaleIgnoreNonEliteUnits = CreateQuickCheckbutton(panelName .. "ScaleIgnoreNonEliteUnits", L["Ignore Non-Elite Units"], AlignmentColumn, panel.ScaleIgnoreNeutralUnits, 16)
@@ -409,6 +408,22 @@ local function CreateInterfacePanel(panelName, panelTitle, heading, parentTitle)
 	panel.ColorDangerGlowOnParty = CreateQuickCheckbutton(panelName .. "ColorDangerGlowOnParty", L["Show Warning around Group Members with Aggro"], AlignmentColumn, panel.ColorAttackingOtherTank)
 	panel.ClassColorPartyMembers = CreateQuickCheckbutton(panelName .. "ClassColorPartyMembers", L["Show Class Color for Party and Raid Members"], AlignmentColumn, panel.ColorDangerGlowOnParty)
 	panel.PetHealthBarColor = CreateQuickColorbox(panelName .. "PetHealthBarColor", "Pet Health Bar Color", AlignmentColumn, panel.ClassColorPartyMembers, 16)
+
+	panel.PetHealthBarColor.OnValueChanged = function()
+		local color = panel.PetHealthBarColor:GetValue()
+		if TidyPlatesThreat and TidyPlatesThreat.db and TidyPlatesThreat.db.profile then
+			local profile = TidyPlatesThreat.db.profile
+			if not profile.PetHealthBarColor then
+				profile.PetHealthBarColor = { r = color.r, g = color.g, b = color.b, a = 1 }
+			else
+				profile.PetHealthBarColor.r = color.r
+				profile.PetHealthBarColor.g = color.g
+				profile.PetHealthBarColor.b = color.b
+				profile.PetHealthBarColor.a = 1
+			end
+		end
+		TidyPlates:ForceUpdate()
+	end
 
 	--Widgets
 	------------------------------
@@ -518,9 +533,14 @@ local function CreateInterfacePanel(panelName, panelTitle, heading, parentTitle)
 		if event == "PLAYER_LOGIN" then
 		elseif event == "PLAYER_ENTERING_WORLD" then
 			GetSavedVariables(TidyPlatesHubTankVariables, TidyPlatesHubTankSavedVariables)
-			-- Pet-Farbe aus ThreatPlates-Profil übernehmen, damit der Picker sie anzeigt
-			if TidyPlatesThreat and TidyPlatesThreat.db and TidyPlatesThreat.db.profile and TidyPlatesThreat.db.profile.PetHealthBarColor then
-				TidyPlatesHubTankVariables.PetHealthBarColor = TidyPlatesThreat.db.profile.PetHealthBarColor
+			-- Picker mit ThreatPlates-Profil synchronisieren
+			if TidyPlatesThreat and TidyPlatesThreat.db and TidyPlatesThreat.db.profile then
+				local profile = TidyPlatesThreat.db.profile
+				if profile.PetHealthBarColor then
+					panel.PetHealthBarColor:SetBackdropColor(profile.PetHealthBarColor.r, profile.PetHealthBarColor.g, profile.PetHealthBarColor.b, 1)
+				else
+					panel.PetHealthBarColor:SetBackdropColor(0.76, 0.42, 1)
+				end
 			end
 			CallForStyleUpdate()
 

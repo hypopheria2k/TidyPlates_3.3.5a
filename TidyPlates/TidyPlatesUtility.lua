@@ -664,8 +664,14 @@ function TidyPlatesUtility.UpdatePetList()
             AddPetName(unit)
         end
     end
-    TidyPlatesUtility.PetNames = PetNames
+	TidyPlatesUtility.PetNames = PetNames
+
+	    -- NEU: Nameplates sofort aktualisieren, damit die Pet-Farbe übernommen wird
+    if TidyPlates then
+        TidyPlates:ForceUpdate()
+    end
 end
+
 
 local PetWatcherFrame = CreateFrame("Frame")
 PetWatcherFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
@@ -673,3 +679,4 @@ PetWatcherFrame:RegisterEvent("GROUP_ROSTER_UPDATE")
 PetWatcherFrame:RegisterEvent("RAID_ROSTER_UPDATE")
 PetWatcherFrame:RegisterEvent("UNIT_PET") -- Behebt Verzögerung nach /reload, wird ausgelöst sobald das eigene Pet geladen ist
 PetWatcherFrame:SetScript("OnEvent", TidyPlatesUtility.UpdatePetList)
+TidyPlatesUtility.UpdatePetList()

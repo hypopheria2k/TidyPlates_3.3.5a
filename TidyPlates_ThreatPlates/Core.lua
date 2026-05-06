@@ -165,6 +165,7 @@ function TidyPlatesThreat:OnInitialize()
 			nHPbarColor = {r = 1, g = 1, b = 1},
 			HPbarColor = {r = 1, g = 1, b = 1},
 			PetHealthBarColor = {r = 0.76, g = 0.42, b = 1},
+			enemyPetColor = false,  -- Apply pet color to enemy pets as well
 			tHPbarColor = {r = 0, g = 0.5, b = 1},
 			totemSettings = {
 				hideHealthbar = false,
@@ -1027,6 +1028,17 @@ function TidyPlatesThreat:OnInitialize()
 	self:SetUpInitialOptions()
 end
 
+function TidyPlatesThreat:OnEnable()
+	-- Fix: Pet Farbe wird nach Client Start korrekt aktualisiert
+	self:RegisterEvent("UNIT_PET", function()
+		TidyPlates:ForceUpdate()
+	end)
+	
+	self:RegisterEvent("PLAYER_ENTERING_WORLD", function()
+		TidyPlates:ForceUpdate()
+	end)
+end
+
 local UnitInGroup = TidyPlatesUtility.UnitInGroup
 local TotemNameFallback = TidyPlatesUtility.TotemNameFallback
 -- Unit Classification
@@ -1367,14 +1379,28 @@ local function EventHandler(self, event, ...)
 			f:RegisterEvent("UPDATE_SHAPESHIFT_FORM")
 		end
 	elseif event == "PLAYER_ENTERING_WORLD" then
-		local iType = select(2, IsInInstance())
-		if iType == "arena" or iType == "pvp" then
-			DB.threat.ON = false
-		elseif iType == "party" or iType == "raid" or iType == "none" then
-			DB.threat.ON = DB.OldSetting
-		end
-		DB.cache = {}
-		self:RegisterEvent("ACTIVE_TALENT_GROUP_CHANGED")
+    local iType = select(2, IsInInstance())
+    if iType == "arena" or iType == "pvp" then
+        DB.threat.ON = false
+    elseif iType == "party" or iType == "raid" or iType == "none" then
+        DB.threat.ON = DB.OldSetting
+    end
+    DB.cache = {}
+    self:RegisterEvent("ACTIVE_TALENT_GROUP_CHANGED")
+    TidyPlates:ForceUpdate()
+
+    -- Warten, bis das eigene Pet vollständig geladen und sein Name bekannt ist
+    local waitFrame = CreateFrame("Frame")
+    waitFrame:SetScript("OnUpdate", function(w)
+        if not UnitExists("pet") then return end
+        local petName = UnitName("pet")
+        if not petName or petName == "Unbekannt" then return end  -- Name noch nicht final
+
+        -- Jetzt ist der Pet-Name gültig → Liste aktualisieren & Plates neu aufbauen
+        TidyPlatesUtility.UpdatePetList()
+        TidyPlates:ForceUpdate()
+        w:Hide()  -- Timer beenden
+    	end)
 	elseif event == "PLAYER_LEAVING_WORLD" then
 		self:UnregisterEvent("ACTIVE_TALENT_GROUP_CHANGED")
 	elseif event == "ACTIVE_TALENT_GROUP_CHANGED" then
@@ -1407,3 +1433,51 @@ f:RegisterEvent("PLAYER_REGEN_DISABLED")
 f:RegisterEvent("PLAYER_REGEN_ENABLED")
 f:RegisterEvent("RAID_TARGET_UPDATE")
 f:SetScript("OnEvent", EventHandler)
+
+-- Debug-Befehl und automatisierte Log-Ausgabe beim ersten Login
+--local debugFrame = CreateFrame("Frame")
+--local debugDone = false
+
+--local function PrintDebugInfo()
+--    print("|cff00ffff=== ThreatPlates Pet Debug ===")
+--    print("UnitExists('pet'):", UnitExists("pet") and "true" or "false")
+--    if UnitExists("pet") then
+--        print("UnitName('pet'):", UnitName("pet"))
+--    end
+--    print("PetNames table empty?", next(TidyPlatesUtility.PetNames or {}) == nil and "yes" or "no")
+--    if TidyPlatesUtility.PetNames then
+--        print("PetNames content:")
+--        for name in pairs(TidyPlatesUtility.PetNames) do
+--            print("  ", name)
+--        end
+--   else
+--        print("PetNames is nil")
+--    end
+--    print("Active Theme:", TidyPlates.ActiveThemeTable and tostring(TidyPlates.ActiveThemeTable) or "nil")
+--    print("ThreatPlates Theme Table:", TidyPlatesThemeList["Threat Plates"] and "exists" or "nil")
+--    print("DB PetColor:", TidyPlatesThreat.db.profile.PetHealthBarColor and "table" or "nil")
+--    if TidyPlatesThreat.db.profile.PetHealthBarColor then
+--        local c = TidyPlatesThreat.db.profile.PetHealthBarColor
+--        print(string.format("Color: r=%.2f g=%.2f b=%.2f", c.r, c.g, c.b))
+--    end
+--    print("|cff00ffff=============================")
+--end
+
+-- Automatisch beim ersten PLAYER_ENTERING_WORLD einmal ausgeben
+--f:HookScript("OnEvent", function(self, event, ...)
+--    if event == "PLAYER_ENTERING_WORLD" and not debugDone then
+--       debugDone = true
+        -- Kurz verzögern, damit UNIT_PET & Co. sicher gefeuert haben
+--        local wait = CreateFrame("Frame")
+--        wait:SetScript("OnUpdate", function(w)
+--            PrintDebugInfo()
+--            w:Hide()
+--        end)
+--    end
+--end)
+
+-- Chat-Befehl: /tpdebug
+--SLASH_TPDEBUG1 = "/tpdebug"
+--SlashCmdList["TPDEBUG"] = function()
+--    PrintDebugInfo()
+--end

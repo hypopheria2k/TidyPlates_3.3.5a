@@ -261,10 +261,21 @@ do
 		local style, custom = TidyPlatesThreat.SetStyle(unit)
 
 		-- Pet-Farbe: Überschreibt alle anderen Farbmodi für Begleiter, sodass sie sofort erkennbar sind.
-		-- 3.3.5a: unit.name kann Server-Suffix enthalten, deshalb mit strsplit bereinigen.
+		-- 3.3.5a: Fallback auf GUID Prüfung wenn PetNames noch leer ist (Client Start Race Condition)
+		-- Hinweis: GUID ist bei Client Login oft NOCH nicht vorhanden! Deshalb behalten wir beide Methoden:
+		if unit.guid then
+			local guidPrefix = strsub(unit.guid, 1, 5)
+			if guidPrefix == "0xF13" or guidPrefix == "0xF14" or guidPrefix == "0xF15" then
+				local petCol = TidyPlatesThreat.db.profile.PetHealthBarColor
+				if petCol then
+					return petCol.r, petCol.g, petCol.b
+				end
+			end
+		end
+
+		-- Fallback Namen Prüfung für wenn GUID noch nicht geladen ist:
 		if TidyPlatesUtility.PetNames then
 			local shortName = unit.name
-			-- Entferne optionales Server-Suffix (z.B. "Bear-Mograine" -> "Bear")
 			local dashPos = strfind(shortName, "-")
 			if dashPos then
 				shortName = strsub(shortName, 1, dashPos - 1)
@@ -272,10 +283,21 @@ do
 			if TidyPlatesUtility.PetNames[shortName] then
 				local petCol = TidyPlatesThreat.db.profile.PetHealthBarColor
 				if petCol then
-					return petCol.r, petCol.g, petCol.b, petCol.r, petCol.g, petCol.b
+					return petCol.r, petCol.g, petCol.b
 				end
 			end
 		end
+
+	-- Feindliche Pets (PvP): GUID-basierte Erkennung, wenn Option aktiviert ist.
+	-- Pets haben in 3.3.5a die GUID-Präfix "0xF14", normale NPCs "0xF13".
+	if db.enemyPetColor and unit.reaction ~= "FRIENDLY" and unit.guid then
+		if strsub(unit.guid, 1, 5) == "0xF14" then
+			local petCol = db.PetHealthBarColor
+			if petCol then
+				return petCol.r, petCol.g, petCol.b
+			end
+		end
+	end
 
 		if custom == true then
 			for k_c, k_v in pairs(db.uniqueSettings.list) do

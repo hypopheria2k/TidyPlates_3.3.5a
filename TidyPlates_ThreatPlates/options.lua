@@ -306,35 +306,63 @@ end
 
 -- Colors
 
+-- Dynamic DB accessor to prevent timing issues with AceDB/SavedVariables loading
+local function GetProfile()
+	return TidyPlatesThreat.db and TidyPlatesThreat.db.profile or {}
+end
+
+-- Colors
 local function GetColor(info)
-	local h, i, j, k = info.arg[1], info.arg[2], info.arg[3], info.arg[4]
-	local color
-	if k then
-		color = db[h][i][j][k]
-	elseif j and not k then
-		color = db[h][i][j]
-	elseif i and not j and not k then
-		color = db[h][i]
-	elseif h and not i and not j and not k then
-		color = db[h]
-	end
-	return color.r, color.g, color.b, color.a
+    local h, i, j, k = info.arg[1], info.arg[2], info.arg[3], info.arg[4]
+    local profile = TidyPlatesThreat.db.profile
+    local color
+
+    -- Sichere Navigation mit Nil-Checks (verhindert Errors bei frischem Login)
+    if k then color = profile[h] and profile[h][i] and profile[h][i][j] and profile[h][i][j][k]
+    elseif j and not k then color = profile[h] and profile[h][i] and profile[h][i][j]
+    elseif i and not j and not k then color = profile[h] and profile[h][i]
+    elseif h and not i and not j and not k then color = profile[h]
+    end
+
+    if color and type(color) == "table" then
+        return color.r or 1, color.g or 1, color.b or 1, color.a or 1
+    end
+    return 1, 1, 1, 1
 end
 
 local function SetColor(info, r, g, b)
-	local h, i, j, k = info.arg[1], info.arg[2], info.arg[3], info.arg[4]
-	local color
-	if k then
-		color = db[h][i][j][k]
-	elseif j and not k then
-		color = db[h][i][j]
-	elseif i and not j and not k then
-		color = db[h][i]
-	elseif h and not i and not j and not k then
-		color = db[h]
-	end
-	color.r, color.g, color.b = r, g, b
-	Update()
+    local h, i, j, k = info.arg[1], info.arg[2], info.arg[3], info.arg[4]
+    local profile = TidyPlatesThreat.db.profile
+    local color
+
+    if k then color = profile[h] and profile[h][i] and profile[h][i][j] and profile[h][i][j][k]
+    elseif j and not k then color = profile[h] and profile[h][i] and profile[h][i][j]
+    elseif i and not j and not k then color = profile[h] and profile[h][i]
+    elseif h and not i and not j and not k then color = profile[h]
+    end
+
+    if color and type(color) == "table" then
+        -- Tabelle existiert bereits, Werte aktualisieren
+        color.r, color.g, color.b = r, g, b
+        color.a = color.a or 1
+    else
+        -- ROBUSTER FALLBACK: Erstelle fehlende Tabellenstruktur sofort
+        -- Behebt das "Grün-Problem" beim allerersten Login, bevor AceDB Defaults merged
+        if h then
+            if not profile[h] then profile[h] = {} end
+            if i then 
+                if not profile[h][i] then profile[h][i] = {} end
+                if j then 
+                    if not profile[h][i][j] then profile[h][i][j] = {} end
+                    if k then profile[h][i][j][k] = {r=r, g=g, b=b, a=1}
+                    else profile[h][i][j] = {r=r, g=g, b=b, a=1} end
+                else profile[h][i] = {r=r, g=g, b=b, a=1} end
+            else profile[h] = {r=r, g=g, b=b, a=1} end
+        end
+    end
+
+    -- Nur Plates refreshen. Kein ReloadTheme/Update, das würde den Picker zerstören.
+    TidyPlates:ForceUpdate()
 end
 
 local function GetColorAlpha(info)
@@ -937,13 +965,6 @@ local function GetOptions()
 															get = GetColor,
 															set = SetColor,
 															arg = {"HPbarColor"}
-														},
-														PetColor = {
-															name = "Pet Health Bar Color",
-															type = "color",
-															get = GetColor,
-															set = SetColor,
-															arg = {"PetHealthBarColor"}
 														}
 													}
 												}
@@ -1075,7 +1096,24 @@ local function GetOptions()
 													hasAlpha = true
 												}
 											}
-										}
+										},
+										PetColor = {
+											name = "Pet Health Bar Color",
+											type = "color",
+											get = GetColor,
+											set = SetColor,
+											arg = {"PetHealthBarColor"},
+											order = 6,
+										},
+										EnemyPetColor = {
+											name = "Apply to Enemy Pets",
+											desc = "If enabled, the custom pet color will also be applied to hostile player pets (e.g. in PvP).",
+											type = "toggle",
+											get = GetValue,
+											set = SetValue,
+											arg = {"enemyPetColor"},
+											order = 5.5,
+										},
 									}
 								}
 							}
