@@ -40,15 +40,17 @@ This fork resolves all known issues from the original backport and introduces se
 > All changes remain **100% backward compatible** with existing themes and saved variables.
 
 ## 🐾 Pet Health Bar Color
-   – Differentiate player pets from their owners with a dedicated color picker.
-   – Located under "Color" in the Hub panels (Damage/Tank), this setting applies a custom
-     health bar color (default: violet) to all friendly player pets (hunter pets, ghouls, etc.).
-   – The chosen color is saved per spec and persists across sessions.
+
+- Give player pets a distinct health bar color to differentiate them from their owners.
+- Configured via the color picker in the Hub panels (Damage/Tank), also accessible through `/tidyplates`.
+- A separate option ("Apply to Enemy Pets") enables the color for hostile pets (e.g. in PvP). Default color: violet.
+- The chosen color is saved per specialization and persists across sessions.
+- **Update (06.05.2026):** Resolved an issue where pet colors wouldn't initialize correctly on login. The color now applies immediately without requiring a `/reload`.
 
 ## 🔧 Technical Deep Dive: Performance Optimizations
 This fork implements low-level optimizations that significantly reduce CPU usage, especially in large raids or crowded zones (Wintergrasp, Alterac Valley).
 
-### 1. Combat Log Throttling (~30 Hz)
+## 1. Combat Log Throttling (~30 Hz)
 > [!NOTE]
 > **Before:** Every `COMBAT_LOG_EVENT_UNFILTERED` triggered full processing, causing frame drops in 40-man raids.  
 > **After:** Time-based throttle (`0.033s`) silently ignores redundant events while maintaining smooth UI updates.
