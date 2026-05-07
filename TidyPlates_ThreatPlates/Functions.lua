@@ -261,19 +261,15 @@ do
 		local style, custom = TidyPlatesThreat.SetStyle(unit)
 
 		-- Pet-Farbe: Überschreibt alle anderen Farbmodi für Begleiter, sodass sie sofort erkennbar sind.
-		-- 3.3.5a: Fallback auf GUID Prüfung wenn PetNames noch leer ist (Client Start Race Condition)
-		-- Hinweis: GUID ist bei Client Login oft NOCH nicht vorhanden! Deshalb behalten wir beide Methoden:
-		if unit.guid then
-			local guidPrefix = strsub(unit.guid, 1, 5)
-			if guidPrefix == "0xF13" or guidPrefix == "0xF14" or guidPrefix == "0xF15" then
-				local petCol = TidyPlatesThreat.db.profile.PetHealthBarColor
-				if petCol then
-					return petCol.r, petCol.g, petCol.b
-				end
+		-- Direkte Prüfung auf das eigene Pet des Spielers – zuverlässig und sofort wirksam.
+		if unit.name and UnitExists("pet") and unit.name == UnitName("pet") then
+			local petCol = TidyPlatesThreat.db.profile.PetHealthBarColor
+			if petCol then
+				return petCol.r, petCol.g, petCol.b
 			end
 		end
 
-		-- Fallback Namen Prüfung für wenn GUID noch nicht geladen ist:
+		-- Fallback für Gruppen-Pets über die interne Liste (sobald gefüllt).
 		if TidyPlatesUtility.PetNames then
 			local shortName = unit.name
 			local dashPos = strfind(shortName, "-")
@@ -288,7 +284,7 @@ do
 			end
 		end
 
-		-- Feindliche Pets (PvP): Erkennung über die interne Namensliste
+		-- Feindliche Pets (PvP): Erkennung ausschließlich über die interne Namensliste
 		if db.enemyPetColor and unit.reaction ~= "FRIENDLY" and TidyPlatesUtility.PetNames then
 			local shortName = unit.name
 			local dashPos = strfind(shortName, "-")
@@ -298,7 +294,7 @@ do
 			if TidyPlatesUtility.PetNames[shortName] then
 				local petCol = db.PetHealthBarColor
 				if petCol then
-				return petCol.r, petCol.g, petCol.b
+					return petCol.r, petCol.g, petCol.b
 				end
 			end
 		end

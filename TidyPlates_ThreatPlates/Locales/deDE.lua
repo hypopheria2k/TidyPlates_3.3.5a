@@ -467,3 +467,9 @@ L["Auras"] = "Auren"
 L["Stances"] = "Haltungen"
 L["Off (0)"] = "Aus (0)"
 L["Debuffs per Line:"] = "Debuffs pro Zeile:"
+
+--Arena Helper--
+L["Show Enemy Class Icons"] = "Zeige feindliche Klassensymbole"
+L["Hide Friendly Healthbars"] = "Verstecke die HP-Leiste für freundliche Ziele"
+L["Hide Friendly Names"] = "Verstecke Feindliche Namen"
+L["Hide healthbars on friendly units."] = "Verstecke die Gesundheitsleiste bei freundlichen Zielen"

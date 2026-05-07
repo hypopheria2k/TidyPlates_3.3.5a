@@ -158,6 +158,7 @@ function TidyPlatesThreat:OnInitialize()
 			friendlyClassIcon = false,
 			showEnemyClassIcon = true,
 			hideFriendlyHealthbar = false,
+			hideFriendlyNames = false,   -- Blendet freundliche Namen aus, wenn hideFriendlyHealthbar aktiv ist
 			cacheClass = false,
 			castbarColor = {toggle = true, r = 1, g = 0.56, b = 0.06, a = 1},
 			castbarColorShield = {toggle = true, r = 1, g = 0, b = 0, a = 1},
@@ -1181,8 +1182,10 @@ function TidyPlatesThreat.SetStyle(unit)
 		elseif unit.reaction == "FRIENDLY" then
 			if DB.friendlyNameOnly then
 				return "text"
+			elseif DB.hideFriendlyHealthbar and DB.hideFriendlyNames then
+				return "empty"   -- Keine Balken, keine Namen, nur Widgets (ClassIcon)
 			elseif DB.hideFriendlyHealthbar then
-				return "text"
+				return "text"    -- Keine Balken, aber Name und Widgets sichtbar
 			elseif DB.nameplate.toggle[T] then
 				return "normal"
 			else

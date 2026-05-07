@@ -50,10 +50,11 @@ This fork resolves all known issues from the original backport and introduces se
 ## 🛡️ Friendly Class Icons Only (Arena Helper)
 
 - Designed for PvP: show class icons for your group members while hiding enemy class icons.
-- Optionally hide the health bars of friendly units without losing their class icons or names.
+- Optionally hide the health bars and names of friendly units, leaving only their class icons visible.
 - Configured via `/tptp` → Widgets → Class Icons → Options:
   - **Show Enemy Class Icons** – uncheck to display icons only for friends.
   - **Hide Friendly Healthbars** – check to remove health bars from friendly units (keeps icons and names).
+  - **Hide Friendly Names** – appears when *Hide Friendly Healthbars* is on; check to also hide names, showing only the class icon.
 - A `/reload` is required after changing these settings for the first time.
 
 ## 🔧 Technical Deep Dive: Performance Optimizations

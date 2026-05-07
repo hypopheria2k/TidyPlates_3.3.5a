@@ -471,3 +471,9 @@ L["Presences"] = true
 L["Shapeshifts"] = true
 L["Auras"] = true
 L["Stances"] = true
+
+--Arena Helper---
+L["Show Enemy Class Icons"] = true
+L["Hide Friendly Healthbars"] = true
+L["Hide Friendly Names"] = true
+L["Hide healthbars on friendly units."] = true
