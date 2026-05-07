@@ -3,92 +3,78 @@
 -----------------------
 local path = "Interface\\AddOns\\TidyPlates_ThreatPlates\\Widgets\\ClassIconWidget\\"
 
-local function noop()
-    return
-end
-
 local function UpdateClassIconWidget(frame, unit)
     local db = TidyPlatesThreat.db.profile
+    
+    -- Grund-Einstellungen
+    frame:SetSize(db.classWidget.scale or 42, db.classWidget.scale or 42) 
+    frame:SetAlpha(1)
+
+    -- 1. Check: Ist das Widget überhaupt an?
     if not db.classWidget.ON then
         frame:Hide()
         return
     end
 
-    -- Feindliche Icons nur anzeigen, wenn showEnemyClassIcon aktiv ist
-    if unit.reaction ~= "FRIENDLY" and not db.showEnemyClassIcon then
+    -- 2. Check: Ist es ein Spieler? (NPCs kriegen hier kein Icon mehr)
+    if unit.type ~= "PLAYER" then
         frame:Hide()
         return
     end
 
-    if unit.class and (unit.class ~= "UNKNOWN") then
-        frame.Icon:SetTexture(path .. db.classWidget.theme .. "\\" .. unit.class)
-        frame:Show()
-    elseif db.cache[unit.name] and db.friendlyClassIcon then
-        local class = db.cache[unit.name]
-        frame.Icon:SetTexture(path .. db.classWidget.theme .. "\\" .. class)
-        frame:Show()
-    elseif unit.guid and not db.cache[unit.name] and db.friendlyClassIcon then
-        local engClass = select(2, GetPlayerInfoByGUID(unit.guid))
-        if engClass then
-            frame.Icon:SetTexture(path .. db.classWidget.theme .. "\\" .. engClass)
-            frame:Show()
-            if db.cacheClass then
-                db.cache[unit.name] = engClass
-            end
-        else
-            frame:Hide()
-        end
-    elseif db.friendlyClassIcon and unit.reaction == "FRIENDLY" and unit.type == "PLAYER" then
-        -- Fallback für Gruppenmitglieder (auch ohne GUID/Cache)
-        local unitId = TidyPlatesUtility.GroupMembers.UnitId[unit.name]
-        if unitId then
-            local _, class = UnitClass(unitId)
-            if class then
-                frame.Icon:SetTexture(path .. db.classWidget.theme .. "\\" .. class)
-                frame:Show()
-                if db.cacheClass then
-                    db.cache[unit.name] = class
-                end
-            else
-                frame:Hide()
-            end
-        else
-            frame:Hide()
-        end
-    else
+    -- 3. Check: Reaktion filtern
+    -- Feindliche Spieler nur, wenn Option an
+    if unit.reaction ~= "FRIENDLY" and not db.showEnemyClassIcon then
         frame:Hide()
+        return
+    -- Freundliche Spieler nur, wenn Option an
+    elseif unit.reaction == "FRIENDLY" and not db.friendlyClassIcon then
+        frame:Hide()
+        return
     end
 
-    -- hack to move friendly class icons above names.
-    if frame:IsShown() and unit.reaction == "FRIENDLY" and unit.type == "PLAYER" then
-        if db.friendlyNameOnly then
-            if not frame.moved then
-                frame:ClearAllPoints()
-                frame:SetPoint("BOTTOM", frame:GetParent(), "BOTTOM", 0, 20)
-                frame.moved = true
-                frame._SetPoint = frame.SetPoint
-                frame.SetPoint = noop
-                frame._SetAllPoints = frame.SetAllPoints
-                frame.SetAllPoints = noop
-            end
-        elseif frame._SetPoint and frame.moved then
-            frame.SetPoint = frame._SetPoint
-            frame.SetAllPoints = frame._SetAllPoints
-            frame:ClearAllPoints()
-            frame:SetPoint("CENTER", frame:GetParent(), "CENTER", -74, 7)
-            frame.moved = nil
+    -- Klassenerkennung (Unit-Daten -> Cache -> GUID-Abfrage)
+    local class = unit.class
+    if not class or class == "UNKNOWN" then
+        class = db.cache[unit.name]
+    end
+
+    if (not class or class == "UNKNOWN") and unit.guid then
+        local engClass = select(2, GetPlayerInfoByGUID(unit.guid))
+        if engClass then
+            class = engClass
+            if db.cacheClass then db.cache[unit.name] = class end
         end
+    end
+
+    -- Wenn wir eine Klasse haben, zeigen wir das Icon unkaputtbar an
+    if class and class ~= "UNKNOWN" then
+        frame.Icon:SetTexture(path .. db.classWidget.theme .. "\\" .. class)
+        
+        -- Positionierung an der Blizzard-Plate (bleibt bei Hide Names sichtbar)
+        frame:ClearAllPoints()
+        frame:SetPoint("CENTER", frame:GetParent(), "CENTER", db.classWidget.x or 0, (db.classWidget.y or 0) + 35)
+        
+        frame:Show()
+    else
+        frame:Hide()
     end
 end
 
 local function CreateClassIconWidget(parent)
     local db = TidyPlatesThreat.db.profile.classWidget
-    local frame = CreateFrame("Frame", nil, parent)
-    frame:SetHeight(64)
-    frame:SetWidth(64)
-    frame.Icon = frame:CreateTexture(nil, "OVERLAY")
+    
+    -- Anker an die originale Blizzard-Plate
+    local blizzardPlate = parent:GetParent() or parent
+    local frame = CreateFrame("Frame", nil, blizzardPlate)
+    
+    frame:SetSize(42, 42)
+    frame.Icon = frame:CreateTexture(nil, "OVERLAY", nil, 7)
     frame.Icon:SetAllPoints(frame)
-    frame:Hide()
+    
+    -- Hohes FrameLevel gegen das Verschwinden
+    frame:SetFrameLevel(200)
+    
     frame.Update = UpdateClassIconWidget
     return frame
 end
