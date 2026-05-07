@@ -288,16 +288,20 @@ do
 			end
 		end
 
-	-- Feindliche Pets (PvP): GUID-basierte Erkennung, wenn Option aktiviert ist.
-	-- Pets haben in 3.3.5a die GUID-Präfix "0xF14", normale NPCs "0xF13".
-	if db.enemyPetColor and unit.reaction ~= "FRIENDLY" and unit.guid then
-		if strsub(unit.guid, 1, 5) == "0xF14" then
-			local petCol = db.PetHealthBarColor
-			if petCol then
+		-- Feindliche Pets (PvP): Erkennung über die interne Namensliste
+		if db.enemyPetColor and unit.reaction ~= "FRIENDLY" and TidyPlatesUtility.PetNames then
+			local shortName = unit.name
+			local dashPos = strfind(shortName, "-")
+			if dashPos then
+				shortName = strsub(shortName, 1, dashPos - 1)
+			end
+			if TidyPlatesUtility.PetNames[shortName] then
+				local petCol = db.PetHealthBarColor
+				if petCol then
 				return petCol.r, petCol.g, petCol.b
+				end
 			end
 		end
-	end
 
 		if custom == true then
 			for k_c, k_v in pairs(db.uniqueSettings.list) do
