@@ -47,6 +47,15 @@ This fork resolves all known issues from the original backport and introduces se
 - The chosen color is saved per specialization and persists across sessions.
 - **Update (06.05.2026):** Resolved an issue where pet colors wouldn't initialize correctly on login. The color now applies immediately without requiring a `/reload`.
 
+## 🛡️ Friendly Class Icons Only (Arena Helper)
+
+- Designed for PvP: show class icons for your group members while hiding enemy class icons.
+- Optionally hide the health bars of friendly units without losing their class icons or names.
+- Configured via `/tptp` → Widgets → Class Icons → Options:
+  - **Show Enemy Class Icons** – uncheck to display icons only for friends.
+  - **Hide Friendly Healthbars** – check to remove health bars from friendly units (keeps icons and names).
+- A `/reload` is required after changing these settings for the first time.
+
 ## 🔧 Technical Deep Dive: Performance Optimizations
 This fork implements low-level optimizations that significantly reduce CPU usage, especially in large raids or crowded zones (Wintergrasp, Alterac Valley).
 

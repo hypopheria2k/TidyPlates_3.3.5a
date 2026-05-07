@@ -156,6 +156,8 @@ function TidyPlatesThreat:OnInitialize()
 			friendlyNameOnly = false,
 			friendlyClickThrough = false,
 			friendlyClassIcon = false,
+			showEnemyClassIcon = true,
+			hideFriendlyHealthbar = false,
 			cacheClass = false,
 			castbarColor = {toggle = true, r = 1, g = 0.56, b = 0.06, a = 1},
 			castbarColorShield = {toggle = true, r = 1, g = 0, b = 0, a = 1},
@@ -1178,6 +1180,8 @@ function TidyPlatesThreat.SetStyle(unit)
 			end
 		elseif unit.reaction == "FRIENDLY" then
 			if DB.friendlyNameOnly then
+				return "text"
+			elseif DB.hideFriendlyHealthbar then
 				return "text"
 			elseif DB.nameplate.toggle[T] then
 				return "normal"

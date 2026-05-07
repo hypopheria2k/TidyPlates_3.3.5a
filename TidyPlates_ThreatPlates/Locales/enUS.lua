@@ -359,6 +359,10 @@ L["Class Icons"] = true
 L["This widget will display class icons on nameplate with the settings you set below."] = true
 L["Enable Friendly Icons"] = true
 L["Enable the showing of friendly player class icons."] = true
+L["Show Enemy Class Icons"] = true
+L["Show class icons on enemy players."] = true
+L["Hide Friendly Healthbars"] = true
+L["Shows only the name and class icons for friendly units (no health bar)."] = true
 
 ----
 L["Combo Points"] = true

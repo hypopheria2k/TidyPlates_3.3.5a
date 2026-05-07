@@ -3530,6 +3530,28 @@ local function GetOptions()
 											set = SetValue,
 											arg = {"friendlyClassIcon"}
 										},
+										EnemyClass = {
+											name = L["Show Enemy Class Icons"],
+											desc = L["Show class icons on enemy players."],
+											type = "toggle",
+											order = 2,
+											width = "double",
+											get = GetValue,
+											set = SetValue,
+											arg = {"showEnemyClassIcon"},
+											disabled = function() return not (db.classWidget.ON and db.friendlyClassIcon) end,
+										},
+										HideFriendlyHealthbar = {
+											name = L["Hide Friendly Healthbars"],
+											desc = L["Shows only the name and class icons for friendly units (no health bar)."],
+											type = "toggle",
+											order = 3,
+											width = "double",
+											get = GetValue,
+											set = SetValue,
+											arg = {"hideFriendlyHealthbar"},
+											disabled = function() return not db.classWidget.ON end,
+										},
 										FriendlyCaching = {
 											name = L["Friendly Caching"],
 											type = "toggle",

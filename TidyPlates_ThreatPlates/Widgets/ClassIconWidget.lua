@@ -9,20 +9,29 @@ end
 
 local function UpdateClassIconWidget(frame, unit)
 	local db = TidyPlatesThreat.db.profile
-	if db.classWidget.ON then
-		if unit.class and (unit.class ~= "UNKNOWN") then
-			frame.Icon:SetTexture(path .. db.classWidget.theme .. "\\" .. unit.class)
+	if not db.classWidget.ON then
+		frame:Hide()
+		return
+	end
+
+	-- Feindliche Icons nur anzeigen, wenn showEnemyClassIcon aktiv ist
+	if unit.reaction ~= "FRIENDLY" and not db.showEnemyClassIcon then
+		frame:Hide()
+		return
+	end
+
+	if unit.class and (unit.class ~= "UNKNOWN") then
+		frame.Icon:SetTexture(path .. db.classWidget.theme .. "\\" .. unit.class)
+		frame:Show()
+	elseif db.cache[unit.name] and db.friendlyClassIcon then
+		local class = db.cache[unit.name]
+		frame.Icon:SetTexture(path .. db.classWidget.theme .. "\\" .. class)
+		frame:Show()
+	elseif unit.guid and not db.cache[unit.name] and db.friendlyClassIcon then
+		local engClass = select(2, GetPlayerInfoByGUID(unit.guid))
+		if engClass then
+			frame.Icon:SetTexture(path .. db.classWidget.theme .. "\\" .. engClass)
 			frame:Show()
-		elseif db.cache[unit.name] and db.friendlyClassIcon then
-			local class = db.cache[unit.name]
-			frame.Icon:SetTexture(path .. db.classWidget.theme .. "\\" .. class)
-			frame:Show()
-		elseif unit.guid and not db.cache[unit.name] and db.friendlyClassIcon then
-			local engClass = select(2, GetPlayerInfoByGUID(unit.guid))
-			if engClass then
-				frame.Icon:SetTexture(path .. db.classWidget.theme .. "\\" .. engClass)
-				frame:Show()
-			end
 		else
 			frame:Hide()
 		end
