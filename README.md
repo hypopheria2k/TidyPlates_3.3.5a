@@ -57,7 +57,7 @@ This fork resolves all known issues from the original backport and introduces se
   - **Hide Friendly Names** – appears when *Hide Friendly Healthbars* is on; check to also hide names, showing only the class icon.
 - A `/reload` is required after changing these settings for the first time.
 
-## 🏆 Smart BG Class Icons (Performance Optimized)
+## 🏆 Smart BG Class Icons (Performance Optimized) *WiP*
 
 > [!TIP]
 > **No more manual mouseovers!** This feature automatically fetches enemy classes as soon as you enter a Battleground.
