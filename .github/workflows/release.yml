@@ -1,0 +1,55 @@
+name: CI/CD Build Release
+
+on:
+  push:
+    branches:
+      - main  # Falls dein Haupt-Branch "master" heißt, hier bitte ändern
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Package Addon
+        run: |
+          # 1. Temporäres Verzeichnis erstellen
+          mkdir build
+          
+          # 2. Kopiere nur die relevanten Addon-Ordner in das build-Verzeichnis
+          # (Wir lassen .git, .github und die README auf der obersten Ebene weg)
+          cp -r TidyPlates build/
+          cp -r TidyPlates_Graphite build/
+          cp -r TidyPlates_Grey build/
+          cp -r TidyPlates_Neon build/
+          cp -r TidyPlates_Quatre build/
+          cp -r TidyPlates_ThreatPlates build/
+          
+          # 3. ZIP erstellen - wir gehen IN den build Ordner, 
+          # damit die Addon-Ordner direkt auf der obersten Ebene liegen
+          cd build
+          zip -r ../TidyPlates_3.3.5a_Latest.zip *
+          cd ..
+
+      - name: Update Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: TidyPlates_3.3.5a_Latest.zip
+          tag_name: latest
+          name: "Latest Development Build"
+          body: |
+            This is an automated build from the latest commit.
+            
+            **Installation:**
+            1. Download `TidyPlates_3.3.5a_Latest.zip` below.
+            2. Extract ALL folders inside the ZIP directly into your `Interface/AddOns` directory.
+            3. Enjoy the bug fixes and the new BG Class Scanner!
+            
+            *Last Update: ${{ github.event.head_commit.message }}*
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
