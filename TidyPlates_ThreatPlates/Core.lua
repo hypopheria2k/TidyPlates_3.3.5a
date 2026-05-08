@@ -1356,57 +1356,47 @@ function TidyPlatesThreat:StartUp()
 	end
 end
 --
-local f = CreateFrame("Frame")
-
 -- WICHTIG: Diese Variablen müssen lokal für die Datei deklariert werden
-local DB, CharDB 
+local DB, CharDB
 
 -- 1. Funktion für den BG-Klassenscan
 local function ScanBG()
     if not TidyPlatesThreat or not TidyPlatesThreat.db or not TidyPlatesThreat.db.profile then return end
     local db = TidyPlatesThreat.db.profile
     if not db.classWidget or not db.classWidget.ON then return end
-    
+
+    RequestBattlefieldScoreData()
     local numScores = GetNumBattlefieldScores()
     if numScores > 0 then
-        db.cache = db.cache or {} -- Sicherstellen, dass der Cache existiert
+        db.cache = db.cache or {}
         for i = 1, numScores do
             local name, _, _, _, _, _, _, _, _, classToken = GetBattlefieldScore(i)
             if name and classToken then
-                -- Namen säubern (Server-Anhänge entfernen)
                 local cleanName = string.match(name, "([^%-]+)")
                 if cleanName then
                     db.cache[cleanName] = classToken
                 end
             end
         end
-        TidyPlates:ForceUpdate()
     end
+    TidyPlates:ForceUpdate()
 end
 
--- (Vor dem Eventhandler) ScanBG-Funktion einfügen
-local function ScanBG()
-    local db = TidyPlatesThreat.db.profile
-    if not db.classWidget.ON then return end
-
-    RequestBattlefieldScoreData()
-    local numScores = GetNumBattlefieldScores()
-    for i = 1, numScores do
-        local name, _, _, _, _, _, _, _, _, classToken = GetBattlefieldScore(i)
-        if name and classToken then
-            local cleanName = string.match(name, "([^%-]+)")
-            if cleanName then
-                db.cache[cleanName] = classToken
-            end
-        end
+-- BG-Polling Frame (vor dem Eventhandler)
+local bgScanFrame = CreateFrame("Frame")
+bgScanFrame:Hide()
+bgScanFrame.timer = 0
+bgScanFrame.scanThrottle = 0
+bgScanFrame:SetScript("OnUpdate", function(self, elapsed)
+    self.timer = self.timer + elapsed
+    if self.timer > 90 and self.timer - self.scanThrottle > 30 then
+        ScanBG()
+        self.scanThrottle = self.timer
     end
-end
+end)
 
--- Eventhandler (unverändert, außer PLAYER_ENTERING_WORLD)
+-- Eventhandler
 local f = CreateFrame("Frame")
-
--- Deklaration außerhalb der Funktion für Dateisichtbarkeit
-local DB, CharDB
 
 local function EventHandler(self, event, ...)
     -- DB-Referenzen bei jedem Event aktualisieren, sobald verfügbar
@@ -1464,19 +1454,14 @@ local function EventHandler(self, event, ...)
                 DB.threat.ON = false
                 DB.cache = {}                     -- Cache leeren, weil neue Gegner
                 RequestBattlefieldScoreData()     -- erste Daten anfordern
-
-                -- Einmaliger Scan nach 30 Sekunden (Lobby-Zeit)
-                local delayFrame = CreateFrame("Frame")
-                delayFrame:SetScript("OnUpdate", function(self, elapsed)
-                    self.timer = (self.timer or 0) + elapsed
-                    if self.timer > 30 then
-                        ScanBG()
-                        TidyPlates:ForceUpdate()
-                        self:Hide()
-                    end
-                end)
+                bgScanFrame.timer = 0
+                bgScanFrame.scanThrottle = 0
+                bgScanFrame:Show()
+                self:RegisterEvent("UPDATE_BATTLEFIELD_SCORE")
             else
                 -- Verlassen der PvP-Instanz (zurück in Welt/Dungeon)
+                bgScanFrame:Hide()
+                self:UnregisterEvent("UPDATE_BATTLEFIELD_SCORE")
                 if DB.threat.ON == false then
                     DB.cache = {}                 -- Alte BG-Daten verwerfen
                 end
@@ -1534,6 +1519,8 @@ local function EventHandler(self, event, ...)
         if TidyPlatesThreat and TidyPlatesThreat.ShapeshiftUpdate then
             TidyPlatesThreat.ShapeshiftUpdate()
         end
+    elseif event == "UPDATE_BATTLEFIELD_SCORE" then
+        ScanBG()
     end
 end
 

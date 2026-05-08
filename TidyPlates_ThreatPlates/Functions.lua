@@ -247,6 +247,13 @@ end
 -- 4. healthbarcolor.lua
 --
 
+local function GetShortName(fullName)
+	if not fullName then return nil end
+	local dashPos = strfind(fullName, "-")
+	if dashPos then return strsub(fullName, 1, dashPos - 1) end
+	return fullName
+end
+
 do
 	TidyPlatesUtility:EnableGroupWatcher()
 	TidyPlatesWidgets:EnableAuraWatcher()
@@ -260,27 +267,21 @@ do
 		local db = TidyPlatesThreat.db.profile
 		local style, custom = TidyPlatesThreat.SetStyle(unit)
 
-		-- Pet-Farbe: Überschreibt alle anderen Farbmodi für Begleiter, sodass sie sofort erkennbar sind.
-		-- Direkte Prüfung auf das eigene Pet des Spielers – zuverlässig und sofort wirksam.
-		--print("|cff00ff00[TP Debug]|r SetHealthbarColor aufgerufen für:", unit.name, "Reaction:", unit.reaction, "UnitName pet:", UnitName("pet"), "Threat ON:", db.threat.ON)
-		if unit.name and UnitExists("pet") and unit.name == UnitName("pet") then
-			local petCol = TidyPlatesThreat.db.profile.PetHealthBarColor
-			if petCol then
-				return petCol.r, petCol.g, petCol.b
+		-- Pet-Farbe: Eigenes Pet des Spielers
+		if unit.name and UnitExists("pet") then
+			if GetShortName(unit.name) == UnitName("pet") then
+				local petCol = TidyPlatesThreat.db.profile.PetHealthBarColor
+				if petCol then
+					return petCol.r, petCol.g, petCol.b
+				end
 			end
 		end
 
 		-- Fallback für Gruppen-Pets über die interne Liste (sobald gefüllt).
 		if TidyPlatesUtility.PetNames then
-			local shortName = unit.name
-			local dashPos = strfind(shortName, "-")
-			if dashPos then
-				shortName = strsub(shortName, 1, dashPos - 1)
-			end
-			if TidyPlatesUtility.PetNames[shortName] then
+			if TidyPlatesUtility.PetNames[GetShortName(unit.name)] then
 				local petCol = TidyPlatesThreat.db.profile.PetHealthBarColor
 				if petCol then
-					--print("|cff00ff00[TP Debug]| Pet-Farbe wird gesetzt:", petCol.r, petCol.g, petCol.b)
 					return petCol.r, petCol.g, petCol.b
 				end
 			end
@@ -288,12 +289,7 @@ do
 
 		-- Feindliche Pets (PvP): ebenfalls nur über die Namensliste
 		if db.enemyPetColor and unit.reaction ~= "FRIENDLY" and TidyPlatesUtility.PetNames then
-			local shortName = unit.name
-			local dashPos = strfind(shortName, "-")
-			if dashPos then
-				shortName = strsub(shortName, 1, dashPos - 1)
-			end
-			if TidyPlatesUtility.PetNames[shortName] then
+			if TidyPlatesUtility.PetNames[GetShortName(unit.name)] then
 				local petCol = db.PetHealthBarColor
 				if petCol then
 					return petCol.r, petCol.g, petCol.b

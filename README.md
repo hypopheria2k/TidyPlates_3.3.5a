@@ -79,6 +79,7 @@ This fork implements a **Smart Scan** logic designed for maximum efficiency:
 > [!NOTE]
 > If icons don't appear (e.g. for late joiners), simply opening the scoreboard once will instantly refresh the cache.
 > *This feature is currently in beta — waiting for community confirmation that it works as intended in all scenarios.*
+> *ATM broken on some Server-Cores, need to be fixed WiP*
 
 
 ## 🔧 Technical Deep Dive: Performance Optimizations

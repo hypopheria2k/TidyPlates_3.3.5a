@@ -72,8 +72,8 @@ local function CreateClassIconWidget(parent)
     frame.Icon = frame:CreateTexture(nil, "OVERLAY", nil, 7)
     frame.Icon:SetAllPoints(frame)
     
-    -- Hohes FrameLevel gegen das Verschwinden
-    frame:SetFrameLevel(200)
+    frame:SetFrameLevel(1)
+    frame:EnableMouse(false)
     
     frame.Update = UpdateClassIconWidget
     return frame
