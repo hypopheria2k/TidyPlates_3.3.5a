@@ -262,6 +262,7 @@ do
 
 		-- Pet-Farbe: Überschreibt alle anderen Farbmodi für Begleiter, sodass sie sofort erkennbar sind.
 		-- Direkte Prüfung auf das eigene Pet des Spielers – zuverlässig und sofort wirksam.
+		--print("|cff00ff00[TP Debug]|r SetHealthbarColor aufgerufen für:", unit.name, "Reaction:", unit.reaction, "UnitName pet:", UnitName("pet"), "Threat ON:", db.threat.ON)
 		if unit.name and UnitExists("pet") and unit.name == UnitName("pet") then
 			local petCol = TidyPlatesThreat.db.profile.PetHealthBarColor
 			if petCol then
@@ -279,12 +280,13 @@ do
 			if TidyPlatesUtility.PetNames[shortName] then
 				local petCol = TidyPlatesThreat.db.profile.PetHealthBarColor
 				if petCol then
+					--print("|cff00ff00[TP Debug]| Pet-Farbe wird gesetzt:", petCol.r, petCol.g, petCol.b)
 					return petCol.r, petCol.g, petCol.b
 				end
 			end
 		end
 
-		-- Feindliche Pets (PvP): Erkennung ausschließlich über die interne Namensliste
+		-- Feindliche Pets (PvP): ebenfalls nur über die Namensliste
 		if db.enemyPetColor and unit.reaction ~= "FRIENDLY" and TidyPlatesUtility.PetNames then
 			local shortName = unit.name
 			local dashPos = strfind(shortName, "-")
@@ -317,7 +319,7 @@ do
 			else
 				local tS = db.totemSettings[TPtotemList[unit.name] or TPtotemList[TotemNameFallback(unit.name)]]
 				if tS[2] then
-					c = tS.color
+					local c = tS.color
 					return c.r, c.g, c.b
 				else
 					return unit.red, unit.green, unit.blue

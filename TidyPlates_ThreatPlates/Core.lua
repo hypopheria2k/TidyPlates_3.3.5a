@@ -1117,86 +1117,96 @@ function TidyPlatesThreat.UnitType(unit)
 end
 
 function TidyPlatesThreat.SetStyle(unit)
-	DB = TidyPlatesThreat.db.profile
-	local T, custom = TidyPlatesThreat.UnitType(unit)
-	if T == "Totem" then
-		local tS = DB.totemSettings[TPtotemList[unit.name] or TPtotemList[TotemNameFallback(unit.name)]]
-		if tS[1] then
-			if DB.totemSettings.hideHealthbar then
-				return "etotem"
-			else
-				return "totem"
-			end
-		else
-			return "empty"
-		end
-	elseif T == "Unique" then
-		for k_c, k_v in pairs(DB.uniqueSettings.list) do
-			if custom and k_v == "GROUP" then
-				if DB.friendlyNameOnly then
-					return "text"
-				elseif DB.uniqueSettings[k_c].showNameplate then
-					return "unique", true
-				else
-					return "empty", true
-				end
-			elseif k_v == unit.name then
-				if DB.uniqueSettings[k_c].showNameplate then
-					return "unique"
-				else
-					return "empty"
-				end
-			end
-		end
-	elseif T then
-		if unit.reaction == "HOSTILE" or unit.reaction == "NEUTRAL" then
-			if DB.nameplate.toggle[T] then
-				if DB.threat.toggle[T] and DB.threat.ON and unit.class == "UNKNOWN" and InCombatLockdown() then
-					if DB.threat.nonCombat then
-						if unit.isInCombat or (unit.health < unit.healthmax) then
-							if TidyPlatesThreat.db.char.threat.tanking then
-								return "tank"
-							else
-								return "dps"
-							end
-						else
-							if not DB.threat.hideNonCombat then
-								return "normal"
-							else
-								return "empty"
-							end
-						end
-					else
-						if TidyPlatesThreat.db.char.threat.tanking then
-							return "tank"
-						else
-							return "dps"
-						end
-					end
-				else
-					return "normal"
-				end
-			else
-				return "empty"
-			end
-		elseif unit.reaction == "FRIENDLY" then
-			if DB.friendlyNameOnly then
-				return "text"
-			elseif DB.hideFriendlyHealthbar and DB.hideFriendlyNames then
-				return "empty"   -- Keine Balken, keine Namen, nur Widgets (ClassIcon)
-			elseif DB.hideFriendlyHealthbar then
-				return "text"    -- Keine Balken, aber Name und Widgets sichtbar
-			elseif DB.nameplate.toggle[T] then
-				return "normal"
-			else
-				return "empty"
-			end
-		else
-			return "empty"
-		end
-	else
-		return "empty"
-	end
+    DB = TidyPlatesThreat.db.profile
+    local T, custom = TidyPlatesThreat.UnitType(unit)
+    local style, extra
+
+    if T == "Totem" then
+        local tS = DB.totemSettings[TPtotemList[unit.name] or TPtotemList[TotemNameFallback(unit.name)]]
+        if tS[1] then
+            style = DB.totemSettings.hideHealthbar and "etotem" or "totem"
+        else
+            style = "empty"
+        end
+    elseif T == "Unique" then
+        for k_c, k_v in pairs(DB.uniqueSettings.list) do
+            if custom and k_v == "GROUP" then
+                if DB.friendlyNameOnly then
+                    style = "text"
+                elseif DB.uniqueSettings[k_c].showNameplate then
+                    style = "unique"
+                    extra = true
+                else
+                    style = "empty"
+                    extra = true
+                end
+                break
+            elseif k_v == unit.name then
+                if DB.uniqueSettings[k_c].showNameplate then
+                    style = "unique"
+                else
+                    style = "empty"
+                end
+                break
+            end
+        end
+        if not style then
+            if unit.isDangerous and (unit.reaction == "FRIENDLY" or unit.reaction == "HOSTILE") then
+                style = "Boss"
+            elseif unit.isElite and not unit.isDangerous and (unit.reaction == "FRIENDLY" or unit.reaction == "HOSTILE") then
+                style = "Elite"
+            elseif not unit.isElite and not unit.isDangerous and (unit.reaction == "FRIENDLY" or unit.reaction == "HOSTILE") then
+                style = "Normal"
+            elseif unit.reaction == "NEUTRAL" then
+                style = "Neutral"
+            else
+                style = "Normal"
+            end
+        end
+    elseif T then -- Normale, Elite, Boss, Neutral
+        if unit.reaction == "HOSTILE" or unit.reaction == "NEUTRAL" then
+            if DB.nameplate.toggle[T] then
+                if DB.threat.toggle[T] and DB.threat.ON and unit.class == "UNKNOWN" and InCombatLockdown() then
+                    if DB.threat.nonCombat then
+                        if unit.isInCombat or (unit.health < unit.healthmax) then
+                            style = TidyPlatesThreat.db.char.threat.tanking and "tank" or "dps"
+                        else
+                            style = DB.threat.hideNonCombat and "empty" or "normal"
+                        end
+                    else
+                        style = TidyPlatesThreat.db.char.threat.tanking and "tank" or "dps"
+                    end
+                else
+                    style = "normal"
+                end
+            else
+                style = "empty"
+            end
+        elseif unit.reaction == "FRIENDLY" then
+            if DB.friendlyNameOnly then
+                style = "text"
+            elseif DB.hideFriendlyHealthbar and DB.hideFriendlyNames then
+                style = "empty"
+            elseif DB.hideFriendlyHealthbar then
+                style = "text"
+            elseif DB.nameplate.toggle[T] then
+                style = "normal"
+            else
+                style = "empty"
+            end
+        else
+            style = "empty"
+        end
+    else
+        style = "empty"
+    end
+
+    -- ★ Debug-Zeile ★
+    --print(string.format("|cffFFAA00[SetStyle]|r %s -> %s (Reaction: %s, T: %s)",
+    --    unit.name or "???", style, unit.reaction, T))
+   -- return style, extra
+--end
+  return style, extra
 end
 
 local function ShowConfigPanel()
@@ -1347,90 +1357,186 @@ function TidyPlatesThreat:StartUp()
 end
 --
 local f = CreateFrame("Frame")
-local function EventHandler(self, event, ...)
-	DB = TidyPlatesThreat.db.profile
-	local CharDB = TidyPlatesThreat.db.char
-	local arg1, arg2 = ...
-	if event == "ADDON_LOADED" then
-		if arg1 == "TidyPlates_ThreatPlates" then
-			local setup = {
-				SetStyle = TidyPlatesThreat.SetStyle,
-				SetScale = TidyPlatesThreat.SetScale,
-				SetAlpha = TidyPlatesThreat.SetAlpha,
-				SetCustomText = TidyPlatesThreat.SetCustomText,
-				SetNameColor = TidyPlatesThreat.SetNameColor,
-				SetThreatColor = TidyPlatesThreat.SetThreatColor,
-				SetCastbarColor = TidyPlatesThreat.SetCastbarColor,
-				SetHealthbarColor = TidyPlatesThreat.SetHealthbarColor,
-				ShowConfigPanel = ShowConfigPanel
-			}
-			TidyPlatesThemeList["Threat Plates"] = setup
-		end
-		f:UnregisterEvent("ADDON_LOADED")
-	elseif event == "PLAYER_LOGIN" then
-		TidyPlatesThreat:StartUp()
-		CharDB.threat.tanking = TidyPlatesThreat:currentRoleBool(Active()) -- Aligns tanking role with current spec on log in.
-		if GetCVar("nameplateShowEnemyTotems") == "1" then
-			DB.nameplate.toggle["Totem"] = true
-		else
-			DB.nameplate.toggle["Totem"] = false
-		end
-		SetCVar("ShowClassColorInNameplate", 1)
 
-		if CharDB.welcome and ((TidyPlatesOptions.primary == "Threat Plates") or (TidyPlatesOptions.secondary == "Threat Plates")) and DB.verbose then
-			print(L["|cff89f559Threat Plates:|r Welcome back |cff"] .. HEX_CLASS_COLOR[PlayerClass] .. UnitName("player") .. "|r!!")
-		end
+-- WICHTIG: Diese Variablen müssen lokal für die Datei deklariert werden
+local DB, CharDB 
 
-		-- Enable Stances / Shapeshifts and Create Options Tables
-		if PlayerClass == "WARRIOR" or PlayerClass == "DRUID" or PlayerClass == "DEATHKNIGHT" or PlayerClass == "PALADIN" then
-			f:RegisterEvent("UPDATE_SHAPESHIFT_FORM")
-		end
-	elseif event == "PLAYER_ENTERING_WORLD" then
-    local iType = select(2, IsInInstance())
-    if iType == "arena" or iType == "pvp" then
-        DB.threat.ON = false
-    elseif iType == "party" or iType == "raid" or iType == "none" then
-        DB.threat.ON = DB.OldSetting
-    end
-    DB.cache = {}
-    self:RegisterEvent("ACTIVE_TALENT_GROUP_CHANGED")
-    TidyPlates:ForceUpdate()
-
-    -- Warten, bis das eigene Pet vollständig geladen und sein Name bekannt ist
-    local waitFrame = CreateFrame("Frame")
-    waitFrame:SetScript("OnUpdate", function(w)
-        if not UnitExists("pet") then return end
-        local petName = UnitName("pet")
-        if not petName or petName == "Unbekannt" then return end  -- Name noch nicht final
-
-        -- Jetzt ist der Pet-Name gültig → Liste aktualisieren & Plates neu aufbauen
-        TidyPlatesUtility.UpdatePetList()
+-- 1. Funktion für den BG-Klassenscan
+local function ScanBG()
+    if not TidyPlatesThreat or not TidyPlatesThreat.db or not TidyPlatesThreat.db.profile then return end
+    local db = TidyPlatesThreat.db.profile
+    if not db.classWidget or not db.classWidget.ON then return end
+    
+    local numScores = GetNumBattlefieldScores()
+    if numScores > 0 then
+        db.cache = db.cache or {} -- Sicherstellen, dass der Cache existiert
+        for i = 1, numScores do
+            local name, _, _, _, _, _, _, _, _, classToken = GetBattlefieldScore(i)
+            if name and classToken then
+                -- Namen säubern (Server-Anhänge entfernen)
+                local cleanName = string.match(name, "([^%-]+)")
+                if cleanName then
+                    db.cache[cleanName] = classToken
+                end
+            end
+        end
         TidyPlates:ForceUpdate()
-        w:Hide()  -- Timer beenden
-    	end)
-	elseif event == "PLAYER_LEAVING_WORLD" then
-		self:UnregisterEvent("ACTIVE_TALENT_GROUP_CHANGED")
-	elseif event == "ACTIVE_TALENT_GROUP_CHANGED" then
-		local t = CharDB.specInfo[Active()]
-		CharDB.threat.tanking = TidyPlatesThreat:currentRoleBool(Active())
-		if ((TidyPlatesOptions.primary == "Threat Plates") or (TidyPlatesOptions.secondary == "Threat Plates")) and DB.verbose then
-			print(L["|cff89F559Threat Plates|r: Player spec change detected: |cff"] .. HEX_CLASS_COLOR[PlayerClass] .. TidyPlatesThreat:specName() .. ": (" .. t[1] .. "/" .. t[2] .. "/" .. t[3] .. L[")|r, you are now in your |cff89F559"] .. TidyPlatesThreat:dualSpec() .. L["|r spec and are now in your "] .. TidyPlatesThreat:roleText() .. L[" role."])
-		end
-		TidyPlates:ForceUpdate()
-	elseif event == "PLAYER_REGEN_DISABLED" or event == "PLAYER_REGEN_ENABLED" then
-		if DB.threat.ON and (GetCVar("threatWarning") ~= 3) then
-			SetCVar("threatWarning", 3)
-		elseif not DB.threat.ON and (GetCVar("threatWarning") ~= 0) then
-			SetCVar("threatWarning", 0)
-		end
-	elseif event == "PLAYER_LOGOUT" then
-		DB.cache = {}
-	elseif event == "RAID_TARGET_UPDATE" then
-		TidyPlates:Update()
-	elseif event == "UPDATE_SHAPESHIFT_FORM" then
-		TidyPlatesThreat.ShapeshiftUpdate()
-	end
+    end
 end
+
+-- (Vor dem Eventhandler) ScanBG-Funktion einfügen
+local function ScanBG()
+    local db = TidyPlatesThreat.db.profile
+    if not db.classWidget.ON then return end
+
+    RequestBattlefieldScoreData()
+    local numScores = GetNumBattlefieldScores()
+    for i = 1, numScores do
+        local name, _, _, _, _, _, _, _, _, classToken = GetBattlefieldScore(i)
+        if name and classToken then
+            local cleanName = string.match(name, "([^%-]+)")
+            if cleanName then
+                db.cache[cleanName] = classToken
+            end
+        end
+    end
+end
+
+-- Eventhandler (unverändert, außer PLAYER_ENTERING_WORLD)
+local f = CreateFrame("Frame")
+
+-- Deklaration außerhalb der Funktion für Dateisichtbarkeit
+local DB, CharDB
+
+local function EventHandler(self, event, ...)
+    -- DB-Referenzen bei jedem Event aktualisieren, sobald verfügbar
+    if TidyPlatesThreat and TidyPlatesThreat.db then
+        DB = TidyPlatesThreat.db.profile
+        CharDB = TidyPlatesThreat.db.char
+        -- Damit der Color Picker (extern/global) darauf zugreifen kann:
+        _G.TidyPlatesThreatDB = DB 
+    end
+
+    local arg1, arg2 = ...
+    if event == "ADDON_LOADED" then
+        if arg1 == "TidyPlates_ThreatPlates" then
+            local setup = {
+                SetStyle = TidyPlatesThreat.SetStyle,
+                SetScale = TidyPlatesThreat.SetScale,
+                SetAlpha = TidyPlatesThreat.SetAlpha,
+                SetCustomText = TidyPlatesThreat.SetCustomText,
+                SetNameColor = TidyPlatesThreat.SetNameColor,
+                SetThreatColor = TidyPlatesThreat.SetThreatColor,
+                SetCastbarColor = TidyPlatesThreat.SetCastbarColor,
+                SetHealthbarColor = TidyPlatesThreat.SetHealthbarColor,
+                ShowConfigPanel = ShowConfigPanel
+            }
+            TidyPlatesThemeList["Threat Plates"] = setup
+        end
+        f:UnregisterEvent("ADDON_LOADED")
+    elseif event == "PLAYER_LOGIN" then
+        TidyPlatesThreat:StartUp()
+        if CharDB then
+            CharDB.threat.tanking = TidyPlatesThreat:currentRoleBool(Active()) -- Aligns tanking role with current spec on log in.
+        end
+        if DB then
+            if GetCVar("nameplateShowEnemyTotems") == "1" then
+                DB.nameplate.toggle["Totem"] = true
+            else
+                DB.nameplate.toggle["Totem"] = false
+            end
+        end
+        SetCVar("ShowClassColorInNameplate", 1)
+
+        if CharDB and CharDB.welcome and ((TidyPlatesOptions.primary == "Threat Plates") or (TidyPlatesOptions.secondary == "Threat Plates")) and DB and DB.verbose then
+            print(L["|cff89f559Threat Plates:|r Welcome back |cff"] .. HEX_CLASS_COLOR[PlayerClass] .. UnitName("player") .. "|r!!")
+        end
+
+        -- Enable Stances / Shapeshifts and Create Options Tables
+        if PlayerClass == "WARRIOR" or PlayerClass == "DRUID" or PlayerClass == "DEATHKNIGHT" or PlayerClass == "PALADIN" then
+            f:RegisterEvent("UPDATE_SHAPESHIFT_FORM")
+        end
+    elseif event == "PLAYER_ENTERING_WORLD" then
+        local _, iType = IsInInstance()
+        if DB then
+            if iType == "pvp" or iType == "arena" then
+                -- BG / Arena betreten
+                DB.threat.ON = false
+                DB.cache = {}                     -- Cache leeren, weil neue Gegner
+                RequestBattlefieldScoreData()     -- erste Daten anfordern
+
+                -- Einmaliger Scan nach 30 Sekunden (Lobby-Zeit)
+                local delayFrame = CreateFrame("Frame")
+                delayFrame:SetScript("OnUpdate", function(self, elapsed)
+                    self.timer = (self.timer or 0) + elapsed
+                    if self.timer > 30 then
+                        ScanBG()
+                        TidyPlates:ForceUpdate()
+                        self:Hide()
+                    end
+                end)
+            else
+                -- Verlassen der PvP-Instanz (zurück in Welt/Dungeon)
+                if DB.threat.ON == false then
+                    DB.cache = {}                 -- Alte BG-Daten verwerfen
+                end
+                DB.threat.ON = DB.OldSetting
+            end
+        end
+        self:RegisterEvent("ACTIVE_TALENT_GROUP_CHANGED")
+        TidyPlates:ForceUpdate()
+
+        -- Warten, bis das eigene Pet vollständig geladen und sein Name bekannt ist
+        local waitFrame = CreateFrame("Frame")
+        waitFrame.timer = 0
+        waitFrame:SetScript("OnUpdate", function(w, elapsed)
+            w.timer = w.timer + elapsed
+            if w.timer > 15 then w:Hide() return end -- Timeout nach 15s
+
+            if not UnitExists("pet") then return end
+            local petName = UnitName("pet")
+            -- Check auf UNKNOWN (lokalisiert) oder Platzhalter
+            if not petName or petName == "Unbekannt" or petName == "Unknown" or petName == UNKNOWN then return end  -- Name noch nicht final
+
+            -- Jetzt ist der Pet-Name gültig → Liste aktualisieren & Plates neu aufbauen
+            if TidyPlatesUtility and TidyPlatesUtility.UpdatePetList then
+                TidyPlatesUtility.UpdatePetList()
+                TidyPlates:ForceUpdate()
+            end
+            w:Hide()  -- Timer beenden
+        end)
+    elseif event == "PLAYER_LEAVING_WORLD" then
+        self:UnregisterEvent("ACTIVE_TALENT_GROUP_CHANGED")
+    elseif event == "ACTIVE_TALENT_GROUP_CHANGED" then
+        if CharDB then
+            local t = CharDB.specInfo[Active()]
+            CharDB.threat.tanking = TidyPlatesThreat:currentRoleBool(Active())
+            if ((TidyPlatesOptions.primary == "Threat Plates") or (TidyPlatesOptions.secondary == "Threat Plates")) and DB and DB.verbose then
+                print(L["|cff89F559Threat Plates|r: Player spec change detected: |cff"] .. HEX_CLASS_COLOR[PlayerClass] .. TidyPlatesThreat:specName() .. ": (" .. t[1] .. "/" .. t[2] .. "/" .. t[3] .. L[")|r, you are now in your |cff89F559"] .. TidyPlatesThreat:dualSpec() .. L["|r spec and are now in your "] .. TidyPlatesThreat:roleText() .. L[" role."])
+            end
+        end
+        TidyPlates:ForceUpdate()
+    elseif event == "PLAYER_REGEN_DISABLED" or event == "PLAYER_REGEN_ENABLED" then
+        if DB then
+            if DB.threat.ON and (GetCVar("threatWarning") ~= "3") then
+                SetCVar("threatWarning", 3)
+            elseif not DB.threat.ON and (GetCVar("threatWarning") ~= "0") then
+                SetCVar("threatWarning", 0)
+            end
+        end
+    elseif event == "PLAYER_LOGOUT" then
+        if DB then
+            DB.cache = {}
+        end
+    elseif event == "RAID_TARGET_UPDATE" then
+        TidyPlates:Update()
+    elseif event == "UPDATE_SHAPESHIFT_FORM" then
+        if TidyPlatesThreat and TidyPlatesThreat.ShapeshiftUpdate then
+            TidyPlatesThreat.ShapeshiftUpdate()
+        end
+    end
+end
+
 f:RegisterEvent("ADDON_LOADED")
 f:RegisterEvent("PLAYER_ENTERING_WORLD")
 f:RegisterEvent("PLAYER_LEAVING_WORLD")
@@ -1441,50 +1547,57 @@ f:RegisterEvent("PLAYER_REGEN_ENABLED")
 f:RegisterEvent("RAID_TARGET_UPDATE")
 f:SetScript("OnEvent", EventHandler)
 
--- Debug-Befehl und automatisierte Log-Ausgabe beim ersten Login
---local debugFrame = CreateFrame("Frame")
---local debugDone = false
-
---local function PrintDebugInfo()
---    print("|cff00ffff=== ThreatPlates Pet Debug ===")
---    print("UnitExists('pet'):", UnitExists("pet") and "true" or "false")
---    if UnitExists("pet") then
---        print("UnitName('pet'):", UnitName("pet"))
---    end
---    print("PetNames table empty?", next(TidyPlatesUtility.PetNames or {}) == nil and "yes" or "no")
---    if TidyPlatesUtility.PetNames then
---        print("PetNames content:")
---        for name in pairs(TidyPlatesUtility.PetNames) do
---            print("  ", name)
---        end
---   else
---        print("PetNames is nil")
---    end
---    print("Active Theme:", TidyPlates.ActiveThemeTable and tostring(TidyPlates.ActiveThemeTable) or "nil")
---    print("ThreatPlates Theme Table:", TidyPlatesThemeList["Threat Plates"] and "exists" or "nil")
---    print("DB PetColor:", TidyPlatesThreat.db.profile.PetHealthBarColor and "table" or "nil")
---    if TidyPlatesThreat.db.profile.PetHealthBarColor then
---        local c = TidyPlatesThreat.db.profile.PetHealthBarColor
---        print(string.format("Color: r=%.2f g=%.2f b=%.2f", c.r, c.g, c.b))
---    end
---    print("|cff00ffff=============================")
---end
-
--- Automatisch beim ersten PLAYER_ENTERING_WORLD einmal ausgeben
---f:HookScript("OnEvent", function(self, event, ...)
---    if event == "PLAYER_ENTERING_WORLD" and not debugDone then
---       debugDone = true
-        -- Kurz verzögern, damit UNIT_PET & Co. sicher gefeuert haben
---        local wait = CreateFrame("Frame")
---        wait:SetScript("OnUpdate", function(w)
---            PrintDebugInfo()
---            w:Hide()
---        end)
---    end
---end)
-
--- Chat-Befehl: /tpdebug
---SLASH_TPDEBUG1 = "/tpdebug"
---SlashCmdList["TPDEBUG"] = function()
---    PrintDebugInfo()
---end
+-- ==========================================================================================
+-- DEBUG-Area (Disabled/Abgeschaltet) << Bleibt drin für den Fall das wieder Scheiße ins Spiel kommt =)
+-- ==========================================================================================
+-- local function PrintDebugInfo()
+--     print("|cff00ffff=== ThreatPlates Pet Debug ===")
+--     local exists = UnitExists("pet")
+--     print("UnitExists('pet'):", exists and "true" or "false")
+--     if exists then
+--         print("UnitName('pet'):", UnitName("pet"))
+--     end
+--     
+--     if TidyPlatesUtility and TidyPlatesUtility.PetNames then
+--         print("PetNames table empty?", next(TidyPlatesUtility.PetNames) == nil and "yes" or "no")
+--         print("PetNames content:")
+--         for name in pairs(TidyPlatesUtility.PetNames) do
+--             print("  - " .. tostring(name))
+--         end
+--     else
+--         print("TidyPlatesUtility.PetNames is nil")
+--     end
+--     
+--     print("Active Theme:", TidyPlates.ActiveThemeTable and "Active" or "nil")
+--     
+--     if TidyPlatesThreat.db and TidyPlatesThreat.db.profile then
+--         local p = TidyPlatesThreat.db.profile
+--         print("DB PetColor Table:", p.PetHealthBarColor and "exists" or "nil")
+--         if p.PetHealthBarColor then
+--             local c = p.PetHealthBarColor
+--             print(string.format("Color Value: r=%.2f g=%.2f b=%.2f", c.r or 0, c.g or 0, c.b or 0))
+--         end
+--     end
+--     print("|cff00ffff=============================")
+-- end
+-- 
+-- local debugDone = false
+-- f:HookScript("OnEvent", function(self, event)
+--     if event == "PLAYER_ENTERING_WORLD" and not debugDone then
+--         debugDone = true
+--         local wait = CreateFrame("Frame")
+--         wait.elapsed = 0
+--         wait:SetScript("OnUpdate", function(w, elapsed)
+--             w.elapsed = w.elapsed + elapsed
+--             if w.elapsed > 4 then 
+--                 PrintDebugInfo()
+--                 w:Hide()
+--             end
+--         end)
+--     end
+-- end)
+-- 
+-- SLASH_TPDEBUG1 = "/tpdebug"
+-- SlashCmdList["TPDEBUG"] = function()
+--     PrintDebugInfo()
+-- end
