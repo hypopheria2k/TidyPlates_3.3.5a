@@ -57,6 +57,30 @@ This fork resolves all known issues from the original backport and introduces se
   - **Hide Friendly Names** – appears when *Hide Friendly Healthbars* is on; check to also hide names, showing only the class icon.
 - A `/reload` is required after changing these settings for the first time.
 
+## 🏆 Smart BG Class Icons (Performance Optimized)
+
+> [!TIP]
+> **No more manual mouseovers!** This feature automatically fetches enemy classes as soon as you enter a Battleground.
+
+### 🔴 The Problem
+In large-scale PvP (like Alterac Valley or Wintergrasp), constant scanning of every unit around you for class data causes **micro-lags** and **FPS drops**, especially on high-population servers.
+
+### 🟢 The Solution
+This fork implements a **Smart Scan** logic designed for maximum efficiency:
+1. **Trigger:** Fires only once when you enter a Battleground.
+2. **Buffer:** Waits **30 seconds** for the server to fully populate the scoreboard data.
+3. **Execution:** Performs a **single, lightning-fast scan** of all participants and caches the results.
+
+### ✨ Benefits
+*   🚀 **Zero Background Load:** No constant CPU loops or combat log sniffing during the fight.
+*   🎯 **Instant Icons:** Shows enemy class icons on nameplates the moment they appear on your screen.
+*   💻 **FPS Friendly:** Optimized to prevent lag spikes, keeping your gameplay smooth during heavy clashes.
+
+> [!NOTE]
+> If icons don't appear (e.g. for late joiners), simply opening the scoreboard once will instantly refresh the cache.
+> *This feature is currently in beta — waiting for community confirmation that it works as intended in all scenarios.*
+
+
 ## 🔧 Technical Deep Dive: Performance Optimizations
 This fork implements low-level optimizations that significantly reduce CPU usage, especially in large raids or crowded zones (Wintergrasp, Alterac Valley).
 
