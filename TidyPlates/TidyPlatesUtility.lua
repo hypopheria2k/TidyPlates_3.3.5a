@@ -651,6 +651,10 @@ function TidyPlatesUtility.UpdatePetList()
     local function AddPetName(unit)
         local name = UnitName(unit)
         if name then
+            local dashPos = strfind(name, "-")
+            if dashPos then
+                name = strsub(name, 1, dashPos - 1)
+            end
             PetNames[name] = true
         end
     end

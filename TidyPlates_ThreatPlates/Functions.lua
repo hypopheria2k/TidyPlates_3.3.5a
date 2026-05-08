@@ -270,24 +270,24 @@ do
 		-- Pet-Farbe: Eigenes Pet des Spielers
 		if unit.name and UnitExists("pet") then
 			if GetShortName(unit.name) == UnitName("pet") then
-				local petCol = TidyPlatesThreat.db.profile.PetHealthBarColor
+				local petCol = db.PetHealthBarColor
 				if petCol then
 					return petCol.r, petCol.g, petCol.b
 				end
 			end
 		end
 
-		-- Fallback für Gruppen-Pets über die interne Liste (sobald gefüllt).
+		-- Gruppen-Pets (Fallback über interne Liste)
 		if TidyPlatesUtility.PetNames then
 			if TidyPlatesUtility.PetNames[GetShortName(unit.name)] then
-				local petCol = TidyPlatesThreat.db.profile.PetHealthBarColor
+				local petCol = db.PetHealthBarColor
 				if petCol then
 					return petCol.r, petCol.g, petCol.b
 				end
 			end
 		end
 
-		-- Feindliche Pets (PvP): ebenfalls nur über die Namensliste
+		-- Feindliche Pets (PvP)
 		if db.enemyPetColor and unit.reaction ~= "FRIENDLY" and TidyPlatesUtility.PetNames then
 			if TidyPlatesUtility.PetNames[GetShortName(unit.name)] then
 				local petCol = db.PetHealthBarColor
