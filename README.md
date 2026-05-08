@@ -76,7 +76,7 @@ This fork implements a **Smart Scan** logic designed for maximum efficiency:
 *   🎯 **Instant Icons:** Shows enemy class icons on nameplates the moment they appear on your screen.
 *   💻 **FPS Friendly:** Optimized to prevent lag spikes, keeping your gameplay smooth during heavy clashes.
 
-> > [!IMPORTANT]
+> [!IMPORTANT]
 > **BG Scanner (Beta):** This feature is currently under active development. 
 > While it works partially on AzerothCore, some server-specific behaviors (like on Warmane) are still being ironed out. 
 > If icons don't appear for late joiners, simply open the scoreboard once to force a refresh.
