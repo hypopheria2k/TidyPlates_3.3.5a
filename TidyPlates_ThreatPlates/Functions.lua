@@ -247,12 +247,7 @@ end
 -- 4. healthbarcolor.lua
 --
 
-local function GetShortName(fullName)
-	if not fullName then return nil end
-	local dashPos = strfind(fullName, "-")
-	if dashPos then return strsub(fullName, 1, dashPos - 1) end
-	return fullName
-end
+local GetShortName = TidyPlatesUtility.GetShortName
 
 do
 	TidyPlatesUtility:EnableGroupWatcher()
@@ -267,6 +262,11 @@ do
 		local db = TidyPlatesThreat.db.profile
 		local style, custom = TidyPlatesThreat.SetStyle(unit)
 
+		--[[
+		print("|cffFFAA00[PetCheck]|r", unit.name, "Realm-frei:", GetShortName(unit.name), 
+		      "in PetNames:", TidyPlatesUtility.PetNames and (TidyPlatesUtility.PetNames[GetShortName(unit.name)] and "JA" or "NEIN"),
+		      "isEnemyPetOption:", db.enemyPetColor)
+		--]]
 		-- Pet-Farbe: Eigenes Pet des Spielers
 		if unit.name and UnitExists("pet") then
 			if GetShortName(unit.name) == UnitName("pet") then
@@ -287,9 +287,9 @@ do
 			end
 		end
 
-		-- Feindliche Pets (PvP)
-		if db.enemyPetColor and unit.reaction ~= "FRIENDLY" and TidyPlatesUtility.PetNames then
-			if TidyPlatesUtility.PetNames[GetShortName(unit.name)] then
+		-- Feindliche Pets (PvP) – über EnemyPetNames-Liste
+		if db.enemyPetColor and unit.reaction == "HOSTILE" and TidyPlatesUtility.EnemyPetNames then
+			if TidyPlatesUtility.EnemyPetNames[GetShortName(unit.name)] then
 				local petCol = db.PetHealthBarColor
 				if petCol then
 					return petCol.r, petCol.g, petCol.b
@@ -297,16 +297,27 @@ do
 			end
 		end
 
-		if custom == true then
-			for k_c, k_v in pairs(db.uniqueSettings.list) do
-				if k_v == "GROUP" then
-					if db.uniqueSettings[k_c].useColor == false and (db.uniqueSettings[k_c].allowMarked == false or not unit.isMarked) then
-						style = TidyPlatesThreat.db.char.threat.tanking and "tank" or "dps"
-					end
-					break
-				end
-			end
-		end
+-- Echte Klasse aus dem Cache oder per GUID erzwingen, um Flackern zu vermeiden
+local class
+if unit.type == "PLAYER" and unit.reaction ~= "FRIENDLY" then
+    class = db.cache[GetShortName(unit.name)]
+    if class and RAID_CLASS_COLORS[class] then
+        return RAID_CLASS_COLORS[class].r, RAID_CLASS_COLORS[class].g, RAID_CLASS_COLORS[class].b
+    end
+end
+
+--print("|cffFFAA00[GuidClass]|r", unit.name, "Class from cache/GUID:", class and class or "not found")
+
+if custom == true then
+    for k_c, k_v in pairs(db.uniqueSettings.list) do
+        if k_v == "GROUP" then
+            if db.uniqueSettings[k_c].useColor == false and (db.uniqueSettings[k_c].allowMarked == false or not unit.isMarked) then
+                style = TidyPlatesThreat.db.char.threat.tanking and "tank" or "dps"
+            end
+            break
+        end
+    end
+end
 
 		if style == "totem" or style == "etotem" then
 			if db.settings.raidicon.hpColor and unit.isMarked then

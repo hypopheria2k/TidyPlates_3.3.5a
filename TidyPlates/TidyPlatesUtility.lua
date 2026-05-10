@@ -641,6 +641,16 @@ do
 	TidyPlatesUtility.DelTable = del
 end
 
+-----------------------
+-- GetShortName - entfernt Realm-Suffix (z.B. "Spieler-Realmname" -> "Spieler")
+-----------------------
+function TidyPlatesUtility.GetShortName(fullName)
+    if not fullName then return nil end
+    local dashPos = strfind(fullName, "-")
+    if dashPos then return strsub(fullName, 1, dashPos - 1) end
+    return fullName
+end
+
 ----------------------
 -- Pet-Name-Tracking
 ----------------------
@@ -676,6 +686,21 @@ function TidyPlatesUtility.UpdatePetList()
     end
 end
 
+-- Feindliche Pet-Namen (PvP) – separat von PetNames
+local EnemyPetNames = {}
+TidyPlatesUtility.EnemyPetNames = EnemyPetNames
+
+function TidyPlatesUtility.AddEnemyPet(name)
+    if not name then return end
+    local short = TidyPlatesUtility.GetShortName(name)
+    if short and short ~= "" then
+        EnemyPetNames[short] = true
+    end
+end
+
+function TidyPlatesUtility.ClearEnemyPets()
+    wipe(EnemyPetNames)
+end
 
 local PetWatcherFrame = CreateFrame("Frame")
 PetWatcherFrame:RegisterEvent("PLAYER_ENTERING_WORLD")

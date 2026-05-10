@@ -1357,32 +1357,69 @@ function TidyPlatesThreat:StartUp()
 end
 --
 -- WICHTIG: Diese Variablen müssen lokal für die Datei deklariert werden
-local DB, CharDB
+local CharDB
 
--- 1. Funktion für den BG-Klassenscan
-local function ScanBG()
+-- Dynamischer BG-Scanner (erkennt classToken-Index selbst)
+local BGScanner = {}
+BGScanner.classTokenIndex = nil  -- wird einmalig pro Session ermittelt
+
+-- Bekannte englische Klassentokens (zur Validierung)
+local VALID_CLASS_TOKENS = {
+    WARRIOR=true, PALADIN=true, HUNTER=true, ROGUE=true,
+    PRIEST=true, DEATHKNIGHT=true, SHAMAN=true, MAGE=true,
+    WARLOCK=true, DRUID=true
+}
+
+function BGScanner:DetectClassTokenIndex()
+    if not TidyPlatesThreat or not TidyPlatesThreat.db or not TidyPlatesThreat.db.profile then return end
+    local numScores = GetNumBattlefieldScores()
+    if numScores == 0 then return nil end
+
+    -- Englischen Klassentoken des eigenen Charakters holen
+    local _, playerClassToken = UnitClass("player")
+    local playerName = UnitName("player")
+    -- Sonderzeichen im Namen für Pattern escapen
+    local safeName = playerName:gsub("%-", "%%-")
+
+    for i = 1, numScores do
+        local scores = { GetBattlefieldScore(i) }
+        local entryName = scores[1]
+
+        if entryName and entryName:match("^" .. safeName) then
+            -- Durchsuche alle Rückgabewerte nach dem eigenen Klassentoken
+            for idx = 2, #scores do
+                if scores[idx] == playerClassToken then
+                    BGScanner.classTokenIndex = idx
+                    return idx
+                end
+            end
+        end
+    end
+    return nil
+end
+
+function BGScanner:ScanAllPlayers()
+    if not BGScanner.classTokenIndex then return end
     if not TidyPlatesThreat or not TidyPlatesThreat.db or not TidyPlatesThreat.db.profile then return end
     local db = TidyPlatesThreat.db.profile
-    if not db.classWidget or not db.classWidget.ON then return end
+    db.cache = db.cache or {}
 
-    RequestBattlefieldScoreData()
     local numScores = GetNumBattlefieldScores()
-    if numScores > 0 then
-        db.cache = db.cache or {}
-        for i = 1, numScores do
-            local name, _, _, _, _, _, _, _, _, classToken = GetBattlefieldScore(i)
-            if name and classToken then
-                local cleanName = string.match(name, "([^%-]+)")
-                if cleanName then
-                    db.cache[cleanName] = classToken
-                end
+    for i = 1, numScores do
+        local scores = { GetBattlefieldScore(i) }
+        local name = scores[1]
+        local classToken = scores[BGScanner.classTokenIndex]
+        if name and classToken and VALID_CLASS_TOKENS[classToken] then
+            local cleanName = TidyPlatesUtility.GetShortName(name)
+            if cleanName then
+                db.cache[cleanName] = classToken
             end
         end
     end
     TidyPlates:ForceUpdate()
 end
 
--- BG-Polling Frame (vor dem Eventhandler)
+-- BG-Polling Frame
 local bgScanFrame = CreateFrame("Frame")
 bgScanFrame:Hide()
 bgScanFrame.timer = 0
@@ -1390,7 +1427,11 @@ bgScanFrame.scanThrottle = 0
 bgScanFrame:SetScript("OnUpdate", function(self, elapsed)
     self.timer = self.timer + elapsed
     if self.timer > 90 and self.timer - self.scanThrottle > 30 then
-        ScanBG()
+        -- Bei jedem Scan zuerst Index prüfen (falls noch nicht bekannt)
+        if not BGScanner.classTokenIndex then
+            BGScanner:DetectClassTokenIndex()
+        end
+        BGScanner:ScanAllPlayers()
         self.scanThrottle = self.timer
     end
 end)
@@ -1447,6 +1488,7 @@ local function EventHandler(self, event, ...)
             f:RegisterEvent("UPDATE_SHAPESHIFT_FORM")
         end
     elseif event == "PLAYER_ENTERING_WORLD" then
+        BGScanner.classTokenIndex = nil
         local _, iType = IsInInstance()
         if DB then
             if iType == "pvp" or iType == "arena" then
@@ -1461,6 +1503,8 @@ local function EventHandler(self, event, ...)
             else
                 -- Verlassen der PvP-Instanz (zurück in Welt/Dungeon)
                 bgScanFrame:Hide()
+                BGScanner.classTokenIndex = nil
+                TidyPlatesUtility.ClearEnemyPets()
                 self:UnregisterEvent("UPDATE_BATTLEFIELD_SCORE")
                 if DB.threat.ON == false then
                     DB.cache = {}                 -- Alte BG-Daten verwerfen
@@ -1513,6 +1557,19 @@ local function EventHandler(self, event, ...)
         if DB then
             DB.cache = {}
         end
+    elseif event == "PLAYER_TARGET_CHANGED" then
+        if UnitExists("target") and DB and DB.enemyPetColor then
+            local _, iType = IsInInstance()
+            if iType == "pvp" or iType == "arena" then
+                if UnitIsPlayer("target") == false
+                   and UnitReaction("player", "target") ~= nil
+                   and UnitReaction("player", "target") <= 2
+                   and not TPtotemList[UnitName("target")] then
+                    TidyPlatesUtility.AddEnemyPet(UnitName("target"))
+                    TidyPlates:ForceUpdate()
+                end
+            end
+        end
     elseif event == "RAID_TARGET_UPDATE" then
         TidyPlates:Update()
     elseif event == "UPDATE_SHAPESHIFT_FORM" then
@@ -1520,7 +1577,10 @@ local function EventHandler(self, event, ...)
             TidyPlatesThreat.ShapeshiftUpdate()
         end
     elseif event == "UPDATE_BATTLEFIELD_SCORE" then
-        ScanBG()
+        if not BGScanner.classTokenIndex then
+            BGScanner:DetectClassTokenIndex()
+        end
+        -- Scan läuft nur über den 90s Timer in bgScanFrame
     end
 end
 
@@ -1532,59 +1592,60 @@ f:RegisterEvent("PLAYER_LOGOUT")
 f:RegisterEvent("PLAYER_REGEN_DISABLED")
 f:RegisterEvent("PLAYER_REGEN_ENABLED")
 f:RegisterEvent("RAID_TARGET_UPDATE")
+f:RegisterEvent("PLAYER_TARGET_CHANGED")
 f:SetScript("OnEvent", EventHandler)
 
 -- ==========================================================================================
--- DEBUG-Area (Disabled/Abgeschaltet) << Bleibt drin für den Fall das wieder Scheiße ins Spiel kommt =)
+-- DEBUG-Area (Aktiv) << Gibt nach 4s Debug-Infos aus, /tpdebug jederzeit verfügbar
 -- ==========================================================================================
--- local function PrintDebugInfo()
---     print("|cff00ffff=== ThreatPlates Pet Debug ===")
---     local exists = UnitExists("pet")
---     print("UnitExists('pet'):", exists and "true" or "false")
---     if exists then
---         print("UnitName('pet'):", UnitName("pet"))
---     end
---     
---     if TidyPlatesUtility and TidyPlatesUtility.PetNames then
---         print("PetNames table empty?", next(TidyPlatesUtility.PetNames) == nil and "yes" or "no")
---         print("PetNames content:")
---         for name in pairs(TidyPlatesUtility.PetNames) do
---             print("  - " .. tostring(name))
---         end
---     else
---         print("TidyPlatesUtility.PetNames is nil")
---     end
---     
---     print("Active Theme:", TidyPlates.ActiveThemeTable and "Active" or "nil")
---     
---     if TidyPlatesThreat.db and TidyPlatesThreat.db.profile then
---         local p = TidyPlatesThreat.db.profile
---         print("DB PetColor Table:", p.PetHealthBarColor and "exists" or "nil")
---         if p.PetHealthBarColor then
---             local c = p.PetHealthBarColor
---             print(string.format("Color Value: r=%.2f g=%.2f b=%.2f", c.r or 0, c.g or 0, c.b or 0))
---         end
---     end
---     print("|cff00ffff=============================")
--- end
--- 
--- local debugDone = false
--- f:HookScript("OnEvent", function(self, event)
---     if event == "PLAYER_ENTERING_WORLD" and not debugDone then
---         debugDone = true
---         local wait = CreateFrame("Frame")
---         wait.elapsed = 0
---         wait:SetScript("OnUpdate", function(w, elapsed)
---             w.elapsed = w.elapsed + elapsed
---             if w.elapsed > 4 then 
---                 PrintDebugInfo()
---                 w:Hide()
---             end
---         end)
---     end
--- end)
--- 
--- SLASH_TPDEBUG1 = "/tpdebug"
--- SlashCmdList["TPDEBUG"] = function()
---     PrintDebugInfo()
--- end
+local function PrintDebugInfo()
+    print("|cff00ffff=== ThreatPlates Pet Debug ===")
+    local exists = UnitExists("pet")
+    print("UnitExists('pet'):", exists and "true" or "false")
+    if exists then
+        print("UnitName('pet'):", UnitName("pet"))
+    end
+    
+    if TidyPlatesUtility and TidyPlatesUtility.PetNames then
+        print("PetNames table empty?", next(TidyPlatesUtility.PetNames) == nil and "yes" or "no")
+        print("PetNames content:")
+        for name in pairs(TidyPlatesUtility.PetNames) do
+            print("  - " .. tostring(name))
+        end
+    else
+        print("TidyPlatesUtility.PetNames is nil")
+    end
+    
+    print("Active Theme:", TidyPlates.ActiveThemeTable and "Active" or "nil")
+    
+    if TidyPlatesThreat.db and TidyPlatesThreat.db.profile then
+        local p = TidyPlatesThreat.db.profile
+        print("DB PetColor Table:", p.PetHealthBarColor and "exists" or "nil")
+        if p.PetHealthBarColor then
+            local c = p.PetHealthBarColor
+            print(string.format("Color Value: r=%.2f g=%.2f b=%.2f", c.r or 0, c.g or 0, c.b or 0))
+        end
+    end
+    print("|cff00ffff=============================")
+end
+
+local debugDone = false
+f:HookScript("OnEvent", function(self, event)
+    if event == "PLAYER_ENTERING_WORLD" and not debugDone then
+        debugDone = true
+        local wait = CreateFrame("Frame")
+        wait.elapsed = 0
+        wait:SetScript("OnUpdate", function(w, elapsed)
+            w.elapsed = w.elapsed + elapsed
+            if w.elapsed > 4 then 
+                PrintDebugInfo()
+                w:Hide()
+            end
+        end)
+    end
+end)
+
+SLASH_TPDEBUG1 = "/tpdebug"
+SlashCmdList["TPDEBUG"] = function()
+    PrintDebugInfo()
+end
